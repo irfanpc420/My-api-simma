@@ -1,104 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teach the Bot</title>
-    <style>
-        /* Set a background with a gradient */
-        body {
-            background: linear-gradient(45deg, #ff8c00, #ff0080);
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: #fff;
-            text-align: center;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teach the Bot</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f4f8;
+      margin: 0;
+      padding: 0;
+    }
 
-        .container {
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 30px;
-            border-radius: 10px;
-            max-width: 500px;
-            width: 100%;
-        }
+    .container {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
 
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-        }
+    h1 {
+      color: #333;
+      font-size: 2em;
+    }
 
-        input, button {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border: 1px solid #fff;
-            font-size: 1rem;
-        }
+    .input-group {
+      margin: 20px 0;
+    }
 
-        button {
-            background-color: #ff0080;
-            color: #fff;
-            border: none;
-            cursor: pointer;
-        }
+    input[type="text"] {
+      width: 60%;
+      padding: 10px;
+      font-size: 1.1em;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      margin-right: 10px;
+    }
 
-        button:hover {
-            background-color: #ff0044;
-        }
+    button {
+      padding: 10px 20px;
+      font-size: 1.1em;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
 
-        .message {
-            margin-top: 20px;
-            font-size: 1.1rem;
-            color: #ffdd57;
-        }
+    button:hover {
+      background-color: #45a049;
+    }
 
-        .error {
-            color: #ff6666;
-        }
-    </style>
+    .response {
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: #4CAF50;
+    }
+
+    .error {
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: red;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Teach the Bot</h1>
-        <form id="teachForm">
-            <input type="text" id="ask" placeholder="Ask (e.g. hi)" required>
-            <input type="text" id="ans" placeholder="Answer (e.g. I love you)" required>
-            <button type="submit">Teach Bot</button>
-        </form>
+  <div class="container">
+    <h1>Teach the Bot</h1>
+    <p>Enter a question and answer to teach the bot. The bot will remember it!</p>
 
-        <div class="message" id="responseMessage"></div>
+    <div class="input-group">
+      <input type="text" id="ask" placeholder="Enter a question..." />
+      <input type="text" id="answer" placeholder="Enter an answer..." />
+      <button onclick="teachBot()">Teach Bot</button>
     </div>
 
-    <script>
-        document.getElementById('teachForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
+    <div id="response" class="response"></div>
+    <div id="error" class="error"></div>
+  </div>
 
-            const ask = document.getElementById('ask').value;
-            const ans = document.getElementById('ans').value;
+  <script>
+    async function teachBot() {
+      const ask = document.getElementById('ask').value.trim().toLowerCase();
+      const answer = document.getElementById('answer').value.trim();
 
-            try {
-                const response = await fetch(`/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(ans)}`);
-                const data = await response.json();
+      if (!ask || !answer) {
+        document.getElementById('error').textContent = 'Please provide both question and answer!';
+        return;
+      }
 
-                if (data.err) {
-                    document.getElementById('responseMessage').textContent = `Error: ${data.err}`;
-                    document.getElementById('responseMessage').classList.add('error');
-                } else {
-                    document.getElementById('responseMessage').textContent = `Successfully taught: "${ans}" for "${ask}"`;
-                    document.getElementById('responseMessage').classList.remove('error');
-                }
-            } catch (error) {
-                document.getElementById('responseMessage').textContent = 'Failed to teach the bot. Try again later.';
-                document.getElementById('responseMessage').classList.add('error');
-            }
-        });
-    </script>
+      try {
+        const response = await fetch(`http://localhost:2040/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(answer)}`);
+        const data = await response.json();
+
+        if (data.err) {
+          document.getElementById('error').textContent = data.err;
+          document.getElementById('response').textContent = '';
+        } else {
+          document.getElementById('response').textContent = `Successfully taught: "${answer}" for "${ask}"`;
+          document.getElementById('error').textContent = '';
+        }
+      } catch (error) {
+        document.getElementById('error').textContent = 'Failed to teach the bot. Try again later.';
+        document.getElementById('response').textContent = '';
+      }
+    }
+  </script>
+  
 </body>
 </html>
