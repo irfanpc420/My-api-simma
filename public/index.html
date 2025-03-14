@@ -66,8 +66,9 @@
         <button onclick="sendMessage()">Send</button>
 
         <h2>Teach the Bot</h2>
-        <input type="text" id="teachQuestion" placeholder="Question (ask)">
-        <input type="text" id="teachAnswer" placeholder="Bot's response">
+        <input type="text" id="teachQuestion" placeholder="Teach Question">
+        <input type="text" id="teachAnswer" placeholder="Teach Answer">
+        <input type="text" id="teachResponse" placeholder="Teach Response">
         <button onclick="teachBot()">Teach</button>
     </div>
 
@@ -94,18 +95,20 @@
         async function teachBot() {
             let question = document.getElementById('teachQuestion').value;
             let answer = document.getElementById('teachAnswer').value;
+            let response = document.getElementById('teachResponse').value;
 
-            if (question.trim() === '' || answer.trim() === '') return alert("Please enter both question and answer!");
+            if (question.trim() === '' || answer.trim() === '' || response.trim() === '') 
+                return alert("Please enter all three fields!");
 
             // API-তে নতুন তথ্য পাঠানো
-            let response = await fetch('/api/teach', {
+            let result = await fetch('/api/teach', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question, answer })
+                body: JSON.stringify({ question, answer, response })
             });
 
-            let result = await response.json();
-            alert(result.message);
+            let data = await result.json();
+            alert(data.message);
         }
     </script>
 
