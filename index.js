@@ -2,91 +2,109 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
-// MongoDB URI (আপনার নিজের URI দিয়ে প্রতিস্থাপন করুন)
-const dbURI = "mongodb+srv://botreplitfb:irfan2024@cluster0.j4x32.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-
-// MongoDB কানেকশন
-mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    console.log("MongoDB Connection Successful");
-  })
-  .catch((err) => {
-    console.error("MongoDB Connection Error: ", err);
-  });
-
-// Express অ্যাপ সেটআপ
+// Initialize express app
 const app = express();
 const port = 10000;
 
-// Body parser middleware
+// Middleware
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
-// MongoDB Schema এবং Model
-const messageSchema = new mongoose.Schema({
-  input: String,
-  reply: String
-});
+// MongoDB connection string
+const mongoURI = 'mongodb+srv://botreplitfb:<db_password>@cluster0.j4x32.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
-const Message = mongoose.model('Message', messageSchema);
+// Connect to MongoDB
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => {
+    console.log("MongoDB connected successfully!");
+  })
+  .catch((err) => {
+    console.error('MongoDB Connection Error: ', err.message);
+  });
 
-// '/' রুট - হোম পেজ
+// Default route to check server is working
 app.get('/', (req, res) => {
-  res.send('Welcome to the SMS API. Use /teach to add a message or /delete to remove a message.');
+  res.send('API is working!');
 });
 
-// /teach রুট - SMS টিচ করা
+// API to teach a message
 app.post('/teach', async (req, res) => {
+  const { input, reply } = req.body;
+
+  if (!input || !reply) {
+    return res.status(400).send({ error: "Input and reply are required" });
+  }
+
   try {
-    const { input, reply } = req.body;
-    
-    // নতুন মেসেজ ডকুমেন্ট তৈরি
-    const message = new Message({
+    // Assume a collection named 'messages' exists
+    const Message = mongoose.model('Message', new mongoose.Schema({
+      input: { type: String, required: true },
+      reply: { type: String, required: true }
+    }));
+
+    const existingMessage = await Message.findOne({ input: input.toLowerCase() });
+
+    if (existingMessage) {
+      return res.status(400).send({ error: 'Message already exists!' });
+    }
+
+    const newMessage = new Message({
       input: input.toLowerCase(),
       reply: reply
     });
-    
-    await message.save();  // ডাটাবেজে সংরক্ষণ
-    res.status(201).send({ message: 'Teach command successful' });
 
-    console.log(`Teach message saved: ${input} -> ${reply}`);
+    await newMessage.save();
+    res.status(201).send({ message: 'Message taught successfully!' });
   } catch (err) {
-    console.error("Error saving teach message:", err);
-    res.status(500).send({ error: 'Failed to teach the message' });
+    console.error('Error while teaching message:', err);
+    res.status(500).send({ error: 'Something went wrong while saving message!' });
   }
 });
 
-// /delete রুট - SMS ডিলিট করা
+// API to delete a message
 app.delete('/delete', async (req, res) => {
+  const { input } = req.body;
+
+  if (!input) {
+    return res.status(400).send({ error: 'Input is required to delete' });
+  }
+
   try {
-    const { input } = req.body;
+    const result = await mongoose.model('Message').deleteOne({ input: input.toLowerCase() });
 
-    const message = await Message.findOneAndDelete({ input: input.toLowerCase() });
-
-    if (!message) {
-      return res.status(404).send({ error: 'Message not found' });
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ error: 'Message not found to delete!' });
     }
 
-    res.status(200).send({ message: 'Message deleted successfully' });
-    console.log(`Message deleted: ${input}`);
+    res.status(200).send({ message: 'Message deleted successfully!' });
   } catch (err) {
-    console.error("Error deleting message:", err);
-    res.status(500).send({ error: 'Failed to delete the message' });
+    console.error('Error while deleting message:', err);
+    res.status(500).send({ error: 'Something went wrong while deleting message!' });
   }
 });
 
-// /teach-stats রুট - টিচ করা মেসেজ দেখতে হবে
-app.get('/teach-stats', async (req, res) => {
+// API to check if a message is taught
+app.get('/check', async (req, res) => {
+  const { input } = req.query;
+
+  if (!input) {
+    return res.status(400).send({ error: 'Input is required to check' });
+  }
+
   try {
-    const messages = await Message.find({});
-    res.status(200).json(messages);
+    const message = await mongoose.model('Message').findOne({ input: input.toLowerCase() });
+
+    if (!message) {
+      return res.status(404).send({ error: 'Message not found!' });
+    }
+
+    res.status(200).send({ reply: message.reply });
   } catch (err) {
-    console.error("Error fetching teach stats:", err);
-    res.status(500).send({ error: 'Failed to fetch teach stats' });
+    console.error('Error while checking message:', err);
+    res.status(500).send({ error: 'Something went wrong while checking message!' });
   }
 });
 
-// সার্ভার চালু
+// Start server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
