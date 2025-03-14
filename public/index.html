@@ -1,74 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom UI</title>
-    <style>
-        /* Background setup */
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: url('https://i.imgur.com/LWsb1gm.gif') no-repeat center center;
-            background-size: cover;
-        }
-
-        /* Modal box */
-        .modal {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Buttons */
-        .btn {
-            display: block;
-            margin: 10px auto;
-            padding: 10px 20px;
-            font-size: 18px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            transition: 0.3s;
-        }
-
-        .open-btn {
-            background-color: green;
-            color: white;
-        }
-
-        .cancel-btn {
-            background-color: red;
-            color: white;
-        }
-
-        .btn:hover {
-            opacity: 0.8;
-        }
-
-        /* Hidden text inside Open button */
-        .open-btn span {
-            display: none;
-        }
-
-        /* Show text on hover */
-        .open-btn:hover span {
-            display: inline;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teach the Bot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .form-container {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="submit"] {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .response-message {
+      margin-top: 20px;
+      font-size: 1.1em;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="modal">
-        <button class="btn open-btn">Open <span>- Extra Text Inside</span></button>
-        <button class="btn cancel-btn">Cancel</button>
-    </div>
+  <h1>Teach the Bot</h1>
+  <div class="form-container">
+    <form id="teachForm">
+      <label for="ask">Ask (Question):</label>
+      <input type="text" id="ask" name="ask" required placeholder="Enter a question (ask)">
 
+      <label for="ans">Answer:</label>
+      <input type="text" id="ans" name="ans" required placeholder="Enter the answer (ans)">
+
+      <input type="submit" value="Teach">
+    </form>
+    <div id="response" class="response-message"></div>
+  </div>
+
+  <script>
+    // Handle form submission
+    document.getElementById('teachForm').addEventListener('submit', function (event) {
+      event.preventDefault();  // Prevent default form submission
+      
+      const ask = document.getElementById('ask').value;
+      const ans = document.getElementById('ans').value;
+
+      // Make an API request to teach the bot
+      fetch(`http://localhost:2040/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(ans)}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.message) {
+            document.getElementById('response').innerHTML = `<strong>Success:</strong> ${data.message}`;
+          } else if (data.err) {
+            document.getElementById('response').innerHTML = `<strong>Error:</strong> ${data.err}`;
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          document.getElementById('response').innerHTML = `<strong>Error:</strong> Failed to teach the bot.`;
+        });
+
+      // Clear the input fields after submission
+      document.getElementById('ask').value = '';
+      document.getElementById('ans').value = '';
+    });
+  </script>
+  
 </body>
 </html>
