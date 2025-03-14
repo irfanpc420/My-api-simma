@@ -1,31 +1,17 @@
-const express = require('express');
-const path = require('path');
-const bodyParser = require('body-parser');
+const http = require('http');
 const fs = require('fs');
-const axios = require('axios');
-const math = require('mathjs');
-const cors = require('cors');
+const url = require('url');
+const path = require('path');
 
-const app = express();
-const port = process.env.PORT || 3000;
-
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
-
-// Serve static files (e.g., HTML, CSS, JS)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Define API Routes
-
+// Data file path
 const DATA_FILE = 'data.json';
 
-// Initialize data.json if not exists
+// Initialize data.json if it doesn't exist
 if (!fs.existsSync(DATA_FILE)) {
     fs.writeFileSync(DATA_FILE, JSON.stringify({}, null, 2));
 }
 
-// Load JSON data
+// Load data from JSON file
 function loadData() {
     try {
         const rawData = fs.readFileSync(DATA_FILE);
@@ -35,92 +21,71 @@ function loadData() {
     }
 }
 
-// Save JSON data
+// Save data to JSON file
 function saveData(data) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-// Translation API
-async function translateAPI(text, lang) {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`;
-    try {
-        const response = await axios.get(url);
-        const data = response.data;
-        return data?.[0]?.[0]?.[0] || "Translation error";
-    } catch (error) {
-        return "Translation failed.";
+// Create server
+const server = http.createServer((req, res) => {
+    const parsedUrl = url.parse(req.url, true);
+    const { pathname } = parsedUrl;
+
+    // Serve static files (HTML, CSS, JS)
+    if (pathname === '/' || pathname === '/index.html') {
+        fs.readFile(path.join(__dirname, 'public', 'index.html'), 'utf-8', (err, data) => {
+            if (err) {
+                res.writeHead(500, { 'Content-Type': 'text/plain' });
+                res.end('Error loading page');
+                return;
+            }
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(data);
+        });
     }
-}
+    else if (pathname === '/teach' && req.method === 'POST') {
+        let body = '';
 
-// Wrapper for translation
-async function samirtranslate(text, lang = 'en') {
-    try {
-        return await translateAPI(text, lang);
-    } catch (error) {
-        return "Translation failed.";
+        req.on('data', chunk => {
+            body += chunk;
+        });
+
+        req.on('end', () => {
+            const { input, response } = JSON.parse(body);
+
+            if (!input || !response) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Input and response are required.' }));
+                return;
+            }
+
+            const normalizedInput = input.toLowerCase();
+            let data = loadData();
+
+            if (!data[normalizedInput]) {
+                data[normalizedInput] = [];
+            }
+
+            if (!data[normalizedInput].includes(response)) {
+                data[normalizedInput].push(response);
+                saveData(data);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: `Response added: "${response}"` }));
+            } else {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: `Response already exists: "${response}"` }));
+            }
+        });
     }
-}
-
-// Math expression evaluation
-function evaluateMath(expression) {
-    try {
-        expression = expression.replace(/[^\d+\-*/().^√]/g, '');
-        expression = expression.replace(/\^/g, '**').replace(/√([^)]+)/g, 'Math.sqrt($1)');
-        return math.evaluate(expression)?.toString() || null;
-    } catch {
-        return null;
+    else {
+        // Handle 404
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Route not found' }));
     }
-}
-
-// Bold Mathematical Font
-function toBoldMathematicalFont(text) {
-    const normal = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const bold = '𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘷𝘄𝘅𝘆𝘇123456789';
-    return text.split('').map(char => (normal.includes(char) ? bold[normal.indexOf(char)] : char)).join('');
-}
-
-// Default Home Route
-app.get('/', (req, res) => {
-    res.send('Welcome to the API! Everything is running smoothly.');
-});
-
-// Serve a simple HTML page for testing purposes (in the "public" folder)
-app.get('/public/index.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Teach API (Store input-response in JSON)
-app.post('/teach', async (req, res) => {
-    const { input, response, lang = 'en' } = req.body;
-    if (!input || !response) return res.status(400).json({ error: 'Input and response are required.' });
-
-    try {
-        const normalizedInput = input.toLowerCase();
-        const translatedResponse = await samirtranslate(response, lang);
-        let data = loadData();
-
-        if (!data[normalizedInput]) {
-            data[normalizedInput] = [];
-        }
-
-        if (!data[normalizedInput].includes(translatedResponse)) {
-            data[normalizedInput].push(translatedResponse);
-            saveData(data);
-            return res.json({ message: toBoldMathematicalFont(`Response added: "${response}"`) });
-        } else {
-            return res.json({ message: toBoldMathematicalFont(`Response already exists: "${response}"`) });
-        }
-    } catch (error) {
-        return res.status(500).json({ error: 'Error processing request.' });
-    }
-});
-
-// Handle 404 Errors
-app.use((req, res) => {
-    res.status(404).json({ error: "Route not found." });
 });
 
 // Start server
-app.listen(port, () => {
+const port = 3000;
+server.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
