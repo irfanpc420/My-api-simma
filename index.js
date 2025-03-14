@@ -1,110 +1,97 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-
-// Initialize express app
+const path = require('path');
 const app = express();
-const port = 10000;
+const cors = require('cors');
 
-// Middleware
-app.use(bodyParser.json());
+// MongoDB Atlas Connection URI
+const uri = 'mongodb+srv://g66166566:manha2025@cluster0.v3t0i.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
-// MongoDB connection string
-const mongoURI = 'mongodb+srv://botreplitfb:<db_password>@cluster0.j4x32.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
-
-// Connect to MongoDB
-mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    console.log("MongoDB connected successfully!");
-  })
-  .catch((err) => {
-    console.error('MongoDB Connection Error: ', err.message);
-  });
-
-// Default route to check server is working
-app.get('/', (req, res) => {
-  res.send('API is working!');
-});
-
-// API to teach a message
-app.post('/teach', async (req, res) => {
-  const { input, reply } = req.body;
-
-  if (!input || !reply) {
-    return res.status(400).send({ error: "Input and reply are required" });
-  }
-
-  try {
-    // Assume a collection named 'messages' exists
-    const Message = mongoose.model('Message', new mongoose.Schema({
-      input: { type: String, required: true },
-      reply: { type: String, required: true }
-    }));
-
-    const existingMessage = await Message.findOne({ input: input.toLowerCase() });
-
-    if (existingMessage) {
-      return res.status(400).send({ error: 'Message already exists!' });
-    }
-
-    const newMessage = new Message({
-      input: input.toLowerCase(),
-      reply: reply
+// MongoDB সংযোগ স্থাপন
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => {
+        console.log('MongoDB Connected');
+    })
+    .catch(err => {
+        console.error('MongoDB Connection Error:', err);
     });
 
+// SMS Schema তৈরি করা
+const smsSchema = new mongoose.Schema({
+    input: { type: String, required: true },
+    reply: { type: String, required: true }, // Reply field added
+    isLearned: { type: Boolean, default: false }
+});
+
+// SMS Model তৈরি করা
+const Sms = mongoose.model('Sms', smsSchema);
+
+app.use(cors());
+app.use(express.json());
+
+// Serve Static HTML File
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Root Route - Test API
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Teach Route - SMS টিচ করা
+app.post('/teach', async (req, res) => {
+    const { input, reply } = req.body;
+    if (!input || !reply) {
+        return res.status(400).send({ error: 'Input message and reply are required' });
+    }
+
+    const existingMessage = await Sms.findOne({ input: input.toLowerCase() });
+    if (existingMessage) {
+        return res.status(400).send({ message: 'Message already learned' });
+    }
+
+    const newMessage = new Sms({ input: input.toLowerCase(), reply: reply, isLearned: true });
     await newMessage.save();
-    res.status(201).send({ message: 'Message taught successfully!' });
-  } catch (err) {
-    console.error('Error while teaching message:', err);
-    res.status(500).send({ error: 'Something went wrong while saving message!' });
-  }
+    res.status(200).send({ message: 'Message learned successfully' });
 });
 
-// API to delete a message
-app.delete('/delete', async (req, res) => {
-  const { input } = req.body;
+// Check Route - SMS টিচ করা হয়েছে কিনা চেক করা
+app.get('/check/:message', async (req, res) => {
+    const { message } = req.params;
+    const sms = await Sms.findOne({ input: message.toLowerCase() });
+    
+    if (!sms) {
+        return res.status(404).send({ message: 'Message not found' });
+    }
+    
+    res.status(200).send({ message: `This message is ${sms.isLearned ? 'learned' : 'not learned'}` });
+});
 
-  if (!input) {
-    return res.status(400).send({ error: 'Input is required to delete' });
-  }
+// Reply Route - টিচ করা মেসেজ অনুযায়ী রিপ্লাই দেওয়া
+app.get('/reply/:message', async (req, res) => {
+    const { message } = req.params;
+    const sms = await Sms.findOne({ input: message.toLowerCase() });
 
-  try {
-    const result = await mongoose.model('Message').deleteOne({ input: input.toLowerCase() });
+    if (!sms) {
+        return res.status(404).send({ message: 'No reply found for this message' });
+    }
 
+    res.status(200).send({ reply: sms.reply });
+});
+
+// Delete Route - SMS ডিলিট করা
+app.delete('/delete/:message', async (req, res) => {
+    const { message } = req.params;
+    
+    const result = await Sms.deleteOne({ input: message.toLowerCase() });
     if (result.deletedCount === 0) {
-      return res.status(404).send({ error: 'Message not found to delete!' });
+        return res.status(404).send({ message: 'Message not found' });
     }
 
-    res.status(200).send({ message: 'Message deleted successfully!' });
-  } catch (err) {
-    console.error('Error while deleting message:', err);
-    res.status(500).send({ error: 'Something went wrong while deleting message!' });
-  }
+    res.status(200).send({ message: 'Message deleted successfully' });
 });
 
-// API to check if a message is taught
-app.get('/check', async (req, res) => {
-  const { input } = req.query;
-
-  if (!input) {
-    return res.status(400).send({ error: 'Input is required to check' });
-  }
-
-  try {
-    const message = await mongoose.model('Message').findOne({ input: input.toLowerCase() });
-
-    if (!message) {
-      return res.status(404).send({ error: 'Message not found!' });
-    }
-
-    res.status(200).send({ reply: message.reply });
-  } catch (err) {
-    console.error('Error while checking message:', err);
-    res.status(500).send({ error: 'Something went wrong while checking message!' });
-  }
-});
-
-// Start server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+// Start Server
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
