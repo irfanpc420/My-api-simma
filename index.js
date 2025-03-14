@@ -1,127 +1,58 @@
+// Import required modules
 const http = require('http');
-const fs = require('fs');
 const url = require('url');
-const path = require('path');
 const { MongoClient } = require('mongodb');
 
-// MongoDB Connection URL
-const MONGO_URI = "mongodb+srv://botreplitfb:<db_password>@cluster0.j4x32.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+// MongoDB connection URL
+const connectionString = 'mongodb+srv://botreplitfb:irfan2024@cluster0.j4x32.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const client = new MongoClient(connectionString);
+const DB_NAME = 'myDatabase'; // Replace with your database name
+const COLLECTION_NAME = 'messages'; // Replace with your collection name
 
-// Database and Collection Names
-const DB_NAME = "chatbot";
-const COLLECTION_NAME = "messages";
-
-// Create MongoDB Client
-const client = new MongoClient(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
-
-// Connect to MongoDB
-client.connect()
-  .then(() => {
-    console.log("Connected to MongoDB");
-  })
-  .catch((error) => {
-    console.error("MongoDB connection failed:", error);
-  });
-
-// Create server
-const server = http.createServer((req, res) => {
+// Create HTTP server
+const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const { pathname } = parsedUrl;
 
-  // Serve static files (HTML, CSS, JS)
-  if (pathname === '/' || pathname === '/index.html') {
-    fs.readFile(path.join(__dirname, 'public', 'index.html'), 'utf-8', (err, data) => {
-      if (err) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Error loading page');
-        return;
-      }
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(data);
-    });
-  }
-  else if (pathname === '/teach' && req.method === 'POST') {
+  if (pathname === '/teach' && req.method === 'POST') {
     let body = '';
-
     req.on('data', chunk => {
       body += chunk;
     });
-
+    
     req.on('end', async () => {
-      const { input, response } = JSON.parse(body);
-
-      if (!input || !response) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Input and response are required.' }));
-        return;
-      }
-
       try {
+        const { input, responses } = JSON.parse(body);
+        
+        if (!input || !responses) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Both input and responses are required.' }));
+          return;
+        }
+
+        await client.connect();
         const db = client.db(DB_NAME);
         const collection = db.collection(COLLECTION_NAME);
-        
-        const normalizedInput = input.toLowerCase();
-        const existing = await collection.findOne({ input: normalizedInput });
 
-        if (existing) {
-          // Update response if input already exists
-          const updateResult = await collection.updateOne(
-            { input: normalizedInput },
-            { $push: { responses: response } }
-          );
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ message: `Response added: "${response}"` }));
-        } else {
-          // Insert new input-response pair
-          const newMessage = { input: normalizedInput, responses: [response] };
-          await collection.insertOne(newMessage);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ message: `New message stored: "${input}"` }));
-        }
+        // Insert or update the message
+        const result = await collection.updateOne(
+          { input: input.toLowerCase() },
+          { $set: { responses: responses } },
+          { upsert: true }
+        );
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'Message taught successfully!' }));
       } catch (error) {
-        console.error("Error teaching:", error);
+        console.error("Error teaching message:", error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Failed to save message.' }));
+        res.end(JSON.stringify({ error: 'Failed to teach message.' }));
+      } finally {
+        await client.close();
       }
     });
-  }
-  else if (pathname === '/delete' && req.method === 'POST') {
-    let body = '';
 
-    req.on('data', chunk => {
-      body += chunk;
-    });
-
-    req.on('end', async () => {
-      const { input } = JSON.parse(body);
-
-      if (!input) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Input is required to delete.' }));
-        return;
-      }
-
-      try {
-        const db = client.db(DB_NAME);
-        const collection = db.collection(COLLECTION_NAME);
-        
-        const result = await collection.deleteOne({ input: input.toLowerCase() });
-
-        if (result.deletedCount === 1) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ message: `Message deleted: "${input}"` }));
-        } else {
-          res.writeHead(404, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: `No message found to delete for input: "${input}"` }));
-        }
-      } catch (error) {
-        console.error("Error deleting:", error);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Failed to delete message.' }));
-      }
-    });
-  }
-  else if (pathname === '/reply' && req.method === 'GET') {
+  } else if (pathname === '/reply' && req.method === 'GET') {
     const { input } = parsedUrl.query;
 
     if (!input) {
@@ -131,9 +62,11 @@ const server = http.createServer((req, res) => {
     }
 
     try {
+      await client.connect();
       const db = client.db(DB_NAME);
       const collection = db.collection(COLLECTION_NAME);
 
+      // Get the reply from the database
       const message = await collection.findOne({ input: input.toLowerCase() });
 
       if (message) {
@@ -147,16 +80,50 @@ const server = http.createServer((req, res) => {
       console.error("Error fetching reply:", error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Failed to fetch response.' }));
+    } finally {
+      await client.close();
     }
-  }
-  else {
+
+  } else if (pathname === '/delete' && req.method === 'DELETE') {
+    const { input } = parsedUrl.query;
+
+    if (!input) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Input query parameter is required.' }));
+      return;
+    }
+
+    try {
+      await client.connect();
+      const db = client.db(DB_NAME);
+      const collection = db.collection(COLLECTION_NAME);
+
+      // Delete the message from the database
+      const result = await collection.deleteOne({ input: input.toLowerCase() });
+
+      if (result.deletedCount > 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: `Message with input "${input}" deleted successfully.` }));
+      } else {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `No message found with input: "${input}"` }));
+      }
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Failed to delete message.' }));
+    } finally {
+      await client.close();
+    }
+
+  } else {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Route not found' }));
   }
 });
 
-// Start server
-const port = 3000;
-server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+// Start the server
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
