@@ -1,15 +1,14 @@
-// Author: Anthony
-
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 
 const app = express();
-const PORT = 2040;
+const PORT = 3000;  // নতুন পোর্ট নম্বর
 const DATA_PATH = path.join(__dirname, 'data', 'sim.json');
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());  // JSON রিকোয়েস্ট হ্যান্ডেল করার জন্য
 
 // Default random responses in case input is not found
 const randomResponses = [
@@ -64,12 +63,11 @@ app.get('/chat', async (req, res) => {
 });
 
 // Route to teach the system new responses
-app.get('/teach', async (req, res) => {
-  const ask = req.query.ask?.toLowerCase();
-  const ans = req.query.ans;
-  
+app.post('/teach', async (req, res) => {
+  const { ask, ans } = req.body;
+
   if (!ask || !ans) {
-    return res.json({ err: 'Missing `ask` or `ans` query!', Author: 'Anthony' });
+    return res.json({ err: 'Missing `ask` or `ans` body parameter!', Author: 'Anthony' });
   }
 
   try {
