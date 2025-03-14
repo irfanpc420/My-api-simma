@@ -3,10 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Web</title>
+    <title>Teach API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        label {
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome to the API Web</h1>
-    <p>Everything is running smoothly!</p>
+    <div class="container">
+        <h1>Teach API</h1>
+        <form id="teachForm">
+            <label for="inputMessage">Input Message:</label>
+            <input type="text" id="inputMessage" placeholder="Enter the input message" required>
+
+            <label for="responseMessage">Response Message:</label>
+            <textarea id="responseMessage" placeholder="Enter the response message" required></textarea>
+
+            <button type="submit">Save</button>
+        </form>
+        <p id="statusMessage"></p>
+    </div>
+
+    <script>
+        document.getElementById("teachForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const inputMessage = document.getElementById("inputMessage").value;
+            const responseMessage = document.getElementById("responseMessage").value;
+
+            if (!inputMessage || !responseMessage) {
+                document.getElementById("statusMessage").innerText = "Both fields are required!";
+                return;
+            }
+
+            const response = await fetch('/teach', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    input: inputMessage,
+                    response: responseMessage
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.message) {
+                document.getElementById("statusMessage").innerText = data.message;
+            } else {
+                document.getElementById("statusMessage").innerText = "Error: " + data.error;
+            }
+
+            document.getElementById("teachForm").reset();
+        });
+    </script>
 </body>
 </html>
