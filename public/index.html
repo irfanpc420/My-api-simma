@@ -13,7 +13,7 @@
         }
         .container {
             width: 90%;
-            max-width: 600px;
+            max-width: 500px;
             margin: auto;
             background: #1e1e1e;
             padding: 20px;
@@ -28,7 +28,7 @@
             color: cyan;
             padding: 15px;
             border-radius: 5px;
-            height: 250px;
+            height: 300px;
             overflow-y: auto;
             margin-bottom: 10px;
             text-align: left;
@@ -65,14 +65,14 @@
         <input type="text" id="userInput" placeholder="Type your message...">
         <button onclick="sendMessage()">Send</button>
 
-        <h2>Teach the Bot</h2>
-        <input type="text" id="teachQuestion" placeholder="Teach Question">
-        <input type="text" id="teachAnswer" placeholder="Teach Answer">
-        <input type="text" id="teachResponse" placeholder="Teach Response">
+        <h2>Teach Answer</h2>
+        <input type="text" id="teachAnswer" placeholder="Answer for last message">
         <button onclick="teachBot()">Teach</button>
     </div>
 
     <script>
+        let lastQuestion = "";
+
         async function sendMessage() {
             let input = document.getElementById('userInput').value;
             let chatBox = document.getElementById('chat');
@@ -81,30 +81,27 @@
 
             chatBox.innerHTML += `<p><b>You:</b> ${input}</p>`;
             document.getElementById('userInput').value = '';
+            lastQuestion = input; // লাস্ট প্রশ্ন সংরক্ষণ
 
             // API থেকে উত্তর আনা
             let response = await fetch('/api/chatbot?message=' + encodeURIComponent(input));
             let data = await response.json();
 
             setTimeout(() => {
-                chatBox.innerHTML += `<p><b>Bot:</b> ${data.reply || "I'm still learning, IRFAN is improving me! 😊"}</p>`;
+                chatBox.innerHTML += `<p><b>Bot:</b> ${data.reply || "I don't know this yet! Teach me below. 😊"}</p>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             }, 1000);
         }
 
         async function teachBot() {
-            let question = document.getElementById('teachQuestion').value;
             let answer = document.getElementById('teachAnswer').value;
-            let response = document.getElementById('teachResponse').value;
-
-            if (question.trim() === '' || answer.trim() === '' || response.trim() === '') 
-                return alert("Please enter all three fields!");
+            if (lastQuestion.trim() === '' || answer.trim() === '') return alert("Please enter a valid answer!");
 
             // API-তে নতুন তথ্য পাঠানো
             let result = await fetch('/api/teach', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question, answer, response })
+                body: JSON.stringify({ question: lastQuestion, answer })
             });
 
             let data = await result.json();
