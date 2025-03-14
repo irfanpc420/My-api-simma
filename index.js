@@ -1,129 +1,87 @@
-// Import required modules
-const http = require('http');
-const url = require('url');
-const { MongoClient } = require('mongodb');
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
 
-// MongoDB connection URL
-const connectionString = 'mongodb+srv://botreplitfb:irfan2024@cluster0.j4x32.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
-const client = new MongoClient(connectionString);
-const DB_NAME = 'myDatabase'; // Replace with your database name
-const COLLECTION_NAME = 'messages'; // Replace with your collection name
+// MongoDB URI (আপনার নিজের URI দিয়ে প্রতিস্থাপন করুন)
+const dbURI = "mongodb+srv://botreplitfb:irfan2024@cluster0.j4x32.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
-// Create HTTP server
-const server = http.createServer(async (req, res) => {
-  const parsedUrl = url.parse(req.url, true);
-  const { pathname } = parsedUrl;
+// MongoDB কানেকশন
+mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => {
+    console.log("MongoDB Connection Successful");
+  })
+  .catch((err) => {
+    console.error("MongoDB Connection Error: ", err);
+  });
 
-  if (pathname === '/teach' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk;
+// Express অ্যাপ সেটআপ
+const app = express();
+const port = 10000;
+
+// Body parser middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// MongoDB Schema এবং Model
+const messageSchema = new mongoose.Schema({
+  input: String,
+  reply: String
+});
+
+const Message = mongoose.model('Message', messageSchema);
+
+// /teach রুট - SMS টিচ করা
+app.post('/teach', async (req, res) => {
+  try {
+    const { input, reply } = req.body;
+    
+    // নতুন মেসেজ ডকুমেন্ট তৈরি
+    const message = new Message({
+      input: input.toLowerCase(),
+      reply: reply
     });
     
-    req.on('end', async () => {
-      try {
-        const { input, responses } = JSON.parse(body);
-        
-        if (!input || !responses) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Both input and responses are required.' }));
-          return;
-        }
+    await message.save();  // ডাটাবেজে সংরক্ষণ
+    res.status(201).send({ message: 'Teach command successful' });
 
-        await client.connect();
-        const db = client.db(DB_NAME);
-        const collection = db.collection(COLLECTION_NAME);
-
-        // Insert or update the message
-        const result = await collection.updateOne(
-          { input: input.toLowerCase() },
-          { $set: { responses: responses } },
-          { upsert: true }
-        );
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: 'Message taught successfully!' }));
-      } catch (error) {
-        console.error("Error teaching message:", error);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Failed to teach message.' }));
-      } finally {
-        await client.close();
-      }
-    });
-
-  } else if (pathname === '/reply' && req.method === 'GET') {
-    const { input } = parsedUrl.query;
-
-    if (!input) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Input query parameter is required.' }));
-      return;
-    }
-
-    try {
-      await client.connect();
-      const db = client.db(DB_NAME);
-      const collection = db.collection(COLLECTION_NAME);
-
-      // Get the reply from the database
-      const message = await collection.findOne({ input: input.toLowerCase() });
-
-      if (message) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ input: message.input, responses: message.responses }));
-      } else {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: `No responses found for input: "${input}"` }));
-      }
-    } catch (error) {
-      console.error("Error fetching reply:", error);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Failed to fetch response.' }));
-    } finally {
-      await client.close();
-    }
-
-  } else if (pathname === '/delete' && req.method === 'DELETE') {
-    const { input } = parsedUrl.query;
-
-    if (!input) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Input query parameter is required.' }));
-      return;
-    }
-
-    try {
-      await client.connect();
-      const db = client.db(DB_NAME);
-      const collection = db.collection(COLLECTION_NAME);
-
-      // Delete the message from the database
-      const result = await collection.deleteOne({ input: input.toLowerCase() });
-
-      if (result.deletedCount > 0) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: `Message with input "${input}" deleted successfully.` }));
-      } else {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: `No message found with input: "${input}"` }));
-      }
-    } catch (error) {
-      console.error("Error deleting message:", error);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Failed to delete message.' }));
-    } finally {
-      await client.close();
-    }
-
-  } else {
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Route not found' }));
+    console.log(`Teach message saved: ${input} -> ${reply}`);
+  } catch (err) {
+    console.error("Error saving teach message:", err);
+    res.status(500).send({ error: 'Failed to teach the message' });
   }
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// /delete রুট - SMS ডিলিট করা
+app.delete('/delete', async (req, res) => {
+  try {
+    const { input } = req.body;
+
+    const message = await Message.findOneAndDelete({ input: input.toLowerCase() });
+
+    if (!message) {
+      return res.status(404).send({ error: 'Message not found' });
+    }
+
+    res.status(200).send({ message: 'Message deleted successfully' });
+    console.log(`Message deleted: ${input}`);
+  } catch (err) {
+    console.error("Error deleting message:", err);
+    res.status(500).send({ error: 'Failed to delete the message' });
+  }
+});
+
+// /teach-stats রুট - টিচ করা মেসেজ দেখতে হবে
+app.get('/teach-stats', async (req, res) => {
+  try {
+    const messages = await Message.find({});
+    res.status(200).json(messages);
+  } catch (err) {
+    console.error("Error fetching teach stats:", err);
+    res.status(500).send({ error: 'Failed to fetch teach stats' });
+  }
+});
+
+// সার্ভার চালু
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
