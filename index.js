@@ -5,7 +5,7 @@ const app = express();
 const cors = require('cors');
 
 // MongoDB Atlas Connection URI
-const uri = 'mongodb+srv://g66166566:manha2025@cluster0.v3t0i.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const uri = 'mongodb+srv://Irfan2025:manha2025@cluster0.v3t0i.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
 // MongoDB সংযোগ স্থাপন
 mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
