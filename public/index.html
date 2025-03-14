@@ -1,117 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teach the Bot</title>
-  <link rel="stylesheet" href="styles.css">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f4f8;
-      margin: 0;
-      padding: 0;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-      text-align: center;
-      background-color: white;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-    }
-
-    h1 {
-      color: #333;
-      font-size: 2em;
-    }
-
-    .input-group {
-      margin: 20px 0;
-    }
-
-    input[type="text"] {
-      width: 60%;
-      padding: 10px;
-      font-size: 1.1em;
-      border: 2px solid #ccc;
-      border-radius: 5px;
-      margin-right: 10px;
-    }
-
-    button {
-      padding: 10px 20px;
-      font-size: 1.1em;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-
-    .response {
-      margin-top: 20px;
-      font-size: 1.2em;
-      color: #4CAF50;
-    }
-
-    .error {
-      margin-top: 20px;
-      font-size: 1.2em;
-      color: red;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - IRFAN</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: white;
+            text-align: center;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: auto;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        h1 {
+            color: cyan;
+        }
+        .chat-box {
+            background: black;
+            color: cyan;
+            padding: 15px;
+            border-radius: 5px;
+            height: 250px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        input {
+            width: 80%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        button {
+            background: linear-gradient(45deg, red, orange);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="container">
-    <h1>Teach the Bot</h1>
-    <p>Enter a question and answer to teach the bot. The bot will remember it!</p>
+    <div class="container">
+        <h1>Chatbot</h1>
+        <div class="chat-box" id="chat">
+            <p><b>Bot:</b> Hi! My Name is 🌀 <b>IRFAN</b> 🌀. What's your name?</p>
+        </div>
 
-    <div class="input-group">
-      <input type="text" id="ask" placeholder="Enter a question..." />
-      <input type="text" id="answer" placeholder="Enter an answer..." />
-      <button onclick="teachBot()">Teach Bot</button>
+        <input type="text" id="userInput" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
+
+        <h2>Teach the Bot</h2>
+        <input type="text" id="teachQuestion" placeholder="Question (ask)">
+        <input type="text" id="teachAnswer" placeholder="Bot's response">
+        <button onclick="teachBot()">Teach</button>
     </div>
 
-    <div id="response" class="response"></div>
-    <div id="error" class="error"></div>
-  </div>
+    <script>
+        async function sendMessage() {
+            let input = document.getElementById('userInput').value;
+            let chatBox = document.getElementById('chat');
 
-  <script>
-    async function teachBot() {
-      const ask = document.getElementById('ask').value.trim().toLowerCase();
-      const answer = document.getElementById('answer').value.trim();
+            if (input.trim() === '') return;
 
-      if (!ask || !answer) {
-        document.getElementById('error').textContent = 'Please provide both question and answer!';
-        return;
-      }
+            chatBox.innerHTML += `<p><b>You:</b> ${input}</p>`;
+            document.getElementById('userInput').value = '';
 
-      try {
-        const response = await fetch(`http://localhost:2040/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(answer)}`);
-        const data = await response.json();
+            // API থেকে উত্তর আনা
+            let response = await fetch('/api/chatbot?message=' + encodeURIComponent(input));
+            let data = await response.json();
 
-        if (data.err) {
-          document.getElementById('error').textContent = data.err;
-          document.getElementById('response').textContent = '';
-        } else {
-          document.getElementById('response').textContent = `Successfully taught: "${answer}" for "${ask}"`;
-          document.getElementById('error').textContent = '';
+            setTimeout(() => {
+                chatBox.innerHTML += `<p><b>Bot:</b> ${data.reply || "I'm still learning, IRFAN is improving me! 😊"}</p>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 1000);
         }
-      } catch (error) {
-        document.getElementById('error').textContent = 'Failed to teach the bot. Try again later.';
-        document.getElementById('response').textContent = '';
-      }
-    }
-  </script>
-  
+
+        async function teachBot() {
+            let question = document.getElementById('teachQuestion').value;
+            let answer = document.getElementById('teachAnswer').value;
+
+            if (question.trim() === '' || answer.trim() === '') return alert("Please enter both question and answer!");
+
+            // API-তে নতুন তথ্য পাঠানো
+            let response = await fetch('/api/teach', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question, answer })
+            });
+
+            let result = await response.json();
+            alert(result.message);
+        }
+    </script>
+
 </body>
 </html>
