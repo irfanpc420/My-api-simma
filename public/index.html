@@ -7,78 +7,93 @@
   <style>
     body {
       font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f4f4;
+    }
+    .container {
+      text-align: center;
       padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
     h1 {
-      text-align: center;
+      margin-bottom: 20px;
     }
-    .form-container {
-      max-width: 500px;
-      margin: 0 auto;
+    .form-group {
+      margin: 10px 0;
     }
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-    }
-    input[type="text"], input[type="submit"] {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
-      border: 1px solid #ccc;
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 16px;
       border-radius: 4px;
+      border: 1px solid #ccc;
     }
-    .response-message {
+    button {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .message {
       margin-top: 20px;
-      font-size: 1.1em;
-      text-align: center;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
-
-  <h1>Teach the Bot</h1>
-  <div class="form-container">
-    <form id="teachForm">
-      <label for="ask">Ask (Question):</label>
-      <input type="text" id="ask" name="ask" required placeholder="Enter a question (ask)">
-
+  <div class="container">
+    <h1>Teach the Bot</h1>
+    <div class="form-group">
+      <label for="ask">Question:</label>
+      <input type="text" id="ask" placeholder="Enter a question">
+    </div>
+    <div class="form-group">
       <label for="ans">Answer:</label>
-      <input type="text" id="ans" name="ans" required placeholder="Enter the answer (ans)">
-
-      <input type="submit" value="Teach">
-    </form>
-    <div id="response" class="response-message"></div>
+      <input type="text" id="ans" placeholder="Enter an answer">
+    </div>
+    <button onclick="teachBot()">Teach the Bot</button>
+    <div class="message" id="responseMessage"></div>
   </div>
 
   <script>
-    // Handle form submission
-    document.getElementById('teachForm').addEventListener('submit', function (event) {
-      event.preventDefault();  // Prevent default form submission
-      
-      const ask = document.getElementById('ask').value;
-      const ans = document.getElementById('ans').value;
+    async function teachBot() {
+      const ask = document.getElementById('ask').value.trim().toLowerCase();
+      const ans = document.getElementById('ans').value.trim();
 
-      // Make an API request to teach the bot
-      fetch(`http://localhost:2040/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(ans)}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.message) {
-            document.getElementById('response').innerHTML = `<strong>Success:</strong> ${data.message}`;
-          } else if (data.err) {
-            document.getElementById('response').innerHTML = `<strong>Error:</strong> ${data.err}`;
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          document.getElementById('response').innerHTML = `<strong>Error:</strong> Failed to teach the bot.`;
+      if (!ask || !ans) {
+        document.getElementById('responseMessage').innerText = "Please enter both a question and an answer.";
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:3000/teach', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ask, ans }),
         });
 
-      // Clear the input fields after submission
-      document.getElementById('ask').value = '';
-      document.getElementById('ans').value = '';
-    });
+        const data = await response.json();
+
+        if (data.message) {
+          document.getElementById('responseMessage').innerText = `Successfully taught: "${ask}" → "${ans}"`;
+        } else {
+          document.getElementById('responseMessage').innerText = `Error: ${data.err}`;
+        }
+      } catch (error) {
+        document.getElementById('responseMessage').innerText = "Failed to teach the bot. Try again later.";
+      }
+    }
   </script>
-  
 </body>
 </html>
