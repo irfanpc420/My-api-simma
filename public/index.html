@@ -3,76 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teach API</title>
+    <title>API Teach Web</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            padding: 20px;
             background-color: #f4f4f9;
-            padding: 20px;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         h1 {
-            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
         }
         label {
-            font-size: 16px;
-            margin-bottom: 8px;
             display: block;
+            font-weight: bold;
         }
-        input, textarea {
+        input[type="text"] {
             width: 100%;
             padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
+            margin: 5px 0 10px;
+            border: 1px solid #ccc;
             border-radius: 4px;
         }
         button {
-            background-color: #007bff;
+            padding: 10px 15px;
+            background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 10px 15px;
             border-radius: 4px;
             cursor: pointer;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #45a049;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e7f4e7;
+            border: 1px solid #c8e6c9;
+        }
+        .error {
+            color: red;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Teach API</h1>
-        <form id="teachForm">
-            <label for="inputMessage">Input Message:</label>
-            <input type="text" id="inputMessage" placeholder="Enter the input message" required>
+    <h1>Teach API - Web Interface</h1>
 
-            <label for="responseMessage">Response Message:</label>
-            <textarea id="responseMessage" placeholder="Enter the response message" required></textarea>
-
-            <button type="submit">Save</button>
-        </form>
-        <p id="statusMessage"></p>
+    <!-- Teach Form -->
+    <div class="form-group">
+        <label for="input-message">Input Message:</label>
+        <input type="text" id="input-message" placeholder="Enter message to teach" />
     </div>
+    <div class="form-group">
+        <label for="response-message">Response Message:</label>
+        <input type="text" id="response-message" placeholder="Enter response for the message" />
+    </div>
+    <button onclick="teachMessage()">Teach Message</button>
+
+    <h2>Delete Message</h2>
+    <div class="form-group">
+        <label for="delete-message">Message to Delete:</label>
+        <input type="text" id="delete-message" placeholder="Enter message to delete" />
+    </div>
+    <button onclick="deleteMessage()">Delete Message</button>
+
+    <h2>Check if Message Taught</h2>
+    <div class="form-group">
+        <label for="check-message">Check Message:</label>
+        <input type="text" id="check-message" placeholder="Enter message to check" />
+    </div>
+    <button onclick="checkMessage()">Check Message</button>
+
+    <div id="response-container" class="response"></div>
+    <div id="error-container" class="error"></div>
 
     <script>
-        document.getElementById("teachForm").addEventListener("submit", async function(event) {
-            event.preventDefault();
+        const apiUrl = 'http://localhost:3000'; // Your API URL
 
-            const inputMessage = document.getElementById("inputMessage").value;
-            const responseMessage = document.getElementById("responseMessage").value;
+        function teachMessage() {
+            const inputMessage = document.getElementById('input-message').value.trim();
+            const responseMessage = document.getElementById('response-message').value.trim();
 
             if (!inputMessage || !responseMessage) {
-                document.getElementById("statusMessage").innerText = "Both fields are required!";
+                showError('Both input and response are required.');
                 return;
             }
 
-            const response = await fetch('/teach', {
+            fetch(`${apiUrl}/teach`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -81,18 +104,85 @@
                     input: inputMessage,
                     response: responseMessage
                 })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showResponse(data.message);
+                } else {
+                    showError('Failed to teach message.');
+                }
+            })
+            .catch(error => {
+                showError('Error: ' + error.message);
             });
+        }
 
-            const data = await response.json();
+        function deleteMessage() {
+            const deleteMessageText = document.getElementById('delete-message').value.trim();
 
-            if (data.message) {
-                document.getElementById("statusMessage").innerText = data.message;
-            } else {
-                document.getElementById("statusMessage").innerText = "Error: " + data.error;
+            if (!deleteMessageText) {
+                showError('Please enter a message to delete.');
+                return;
             }
 
-            document.getElementById("teachForm").reset();
-        });
+            fetch(`${apiUrl}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ input: deleteMessageText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showResponse(data.message);
+                } else {
+                    showError('Failed to delete message.');
+                }
+            })
+            .catch(error => {
+                showError('Error: ' + error.message);
+            });
+        }
+
+        function checkMessage() {
+            const checkMessageText = document.getElementById('check-message').value.trim();
+
+            if (!checkMessageText) {
+                showError('Please enter a message to check.');
+                return;
+            }
+
+            fetch(`${apiUrl}/check`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ input: checkMessageText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showResponse(data.message);
+                } else {
+                    showError('No such message found.');
+                }
+            })
+            .catch(error => {
+                showError('Error: ' + error.message);
+            });
+        }
+
+        function showResponse(message) {
+            document.getElementById('response-container').innerText = message;
+            document.getElementById('error-container').innerText = '';
+        }
+
+        function showError(message) {
+            document.getElementById('error-container').innerText = message;
+            document.getElementById('response-container').innerText = '';
+        }
     </script>
 </body>
 </html>
