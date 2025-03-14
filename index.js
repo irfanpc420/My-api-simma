@@ -1,92 +1,48 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs').promises;
-const fsSync = require('fs');
-
+const fs = require('fs');
 const app = express();
-const PORT = 2040; // You can change the port number if needed
-const DATA_PATH = path.join(__dirname, 'data', 'sim.json');
+const PORT = 3001;
 
-app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+app.use(express.static('public')); // index.html লোড হবে
 
-// Default random responses in case input is not found
-const randomResponses = [
-  "I don't know the answer to that.",
-  "Can you teach me?",
-  "I'm not sure, but I'm learning!",
-  "Interesting question! Try again.",
-  "I'm still learning. Can you help?"
-];
+const DATA_FILE = './data/sim.json';
 
-// Check if file exists
-const fileExists = async (filePath) => {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-};
+// আগের ডাটা লোড করা
+function loadData() {
+    if (!fs.existsSync(DATA_FILE)) return {};
+    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+}
 
-// Read JSON data
-const readJSON = async () => {
-  if (!(await fileExists(DATA_PATH))) return {};
-  const fileContent = await fs.readFile(DATA_PATH, 'utf-8');
-  return JSON.parse(fileContent);
-};
+// নতুন ডাটা সেভ করা
+function saveData(data) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
 
-// Write JSON data
-const writeJSON = async (data) => {
-  await fs.writeFile(DATA_PATH, JSON.stringify(data, null, 4));
-};
+// চ্যাটবটের উত্তর বের করা
+app.get('/api/chatbot', (req, res) => {
+    const userMessage = req.query.message.toLowerCase();
+    const data = loadData();
 
-// Route to get a response based on user input
-app.get('/chat', async (req, res) => {
-  try {
-    const data = await readJSON();
-    const ask = req.query.ask?.toLowerCase();
-    let response;
-
-    if (ask && data[ask] && data[ask].length > 0) {
-      const randomIndex = Math.floor(Math.random() * data[ask].length);
-      response = data[ask][randomIndex];
+    if (data[userMessage]) {
+        res.json({ reply: data[userMessage].response });
     } else {
-      response = randomResponses[Math.floor(Math.random() * randomResponses.length)];
+        res.json({ reply: "I don't know this yet! Try teaching me. 😊" });
     }
-
-    return res.json({ respond: response, Author: 'Anthony' });
-  } catch (error) {
-    console.error("Error in /chat route:", error);
-    return res.status(500).json({ respond: 'Internal Server Error', Author: 'Anthony' });
-  }
 });
 
-// Route to teach the system new responses
-app.post('/teach', async (req, res) => {
-  const ask = req.body.ask?.toLowerCase();
-  const ans = req.body.ans;
+// নতুন প্রশ্ন-উত্তর শেখানো
+app.post('/api/teach', (req, res) => {
+    const { question, answer, response } = req.body;
+    if (!question || !answer || !response) return res.json({ message: "Invalid input!" });
 
-  if (!ask || !ans) {
-    return res.json({ err: 'Missing `ask` or `ans` body!', Author: 'Anthony' });
-  }
+    const data = loadData();
+    data[question.toLowerCase()] = { answer, response }; // ছোট হাতের করে সেভ
+    saveData(data);
 
-  try {
-    const data = await readJSON();
-    if (!data[ask]) data[ask] = [];
-    if (!data[ask].includes(ans)) {
-      data[ask].push(ans);
-      await writeJSON(data);
-    }
-
-    return res.json({ message: `Taught: "${ans}" for "${ask}"`, Author: 'Anthony' });
-  } catch (error) {
-    console.error("Error in /teach route:", error);
-    return res.status(500).json({ err: 'Failed to teach', Author: 'Anthony' });
-  }
+    res.json({ message: `Successfully taught: "${question}" -> "${response}"` });
 });
 
-// Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
