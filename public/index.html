@@ -1,55 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teach the Bot</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teach the Bot</title>
+    <style>
+        /* Set a background with a gradient */
+        body {
+            background: linear-gradient(45deg, #ff8c00, #ff0080);
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #fff;
+            text-align: center;
+        }
+
+        .container {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #fff;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: #ff0080;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #ff0044;
+        }
+
+        .message {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            color: #ffdd57;
+        }
+
+        .error {
+            color: #ff6666;
+        }
+    </style>
 </head>
 <body>
-  <h1>Teach the Bot New Responses</h1>
-  
-  <form id="teachForm">
-    <label for="ask">Question (ask):</label>
-    <input type="text" id="ask" name="ask" required><br><br>
 
-    <label for="ans">Answer (ans):</label>
-    <input type="text" id="ans" name="ans" required><br><br>
+    <div class="container">
+        <h1>Teach the Bot</h1>
+        <form id="teachForm">
+            <input type="text" id="ask" placeholder="Ask (e.g. hi)" required>
+            <input type="text" id="ans" placeholder="Answer (e.g. I love you)" required>
+            <button type="submit">Teach Bot</button>
+        </form>
 
-    <button type="submit">Teach</button>
-  </form>
+        <div class="message" id="responseMessage"></div>
+    </div>
 
-  <div id="responseMessage"></div>
+    <script>
+        document.getElementById('teachForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
 
-  <script>
-    const teachForm = document.getElementById('teachForm');
-    const responseMessage = document.getElementById('responseMessage');
+            const ask = document.getElementById('ask').value;
+            const ans = document.getElementById('ans').value;
 
-    teachForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      
-      const ask = document.getElementById('ask').value;
-      const ans = document.getElementById('ans').value;
+            try {
+                const response = await fetch(`/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(ans)}`);
+                const data = await response.json();
 
-      try {
-        const response = await fetch('/teach', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ ask, ans }),
+                if (data.err) {
+                    document.getElementById('responseMessage').textContent = `Error: ${data.err}`;
+                    document.getElementById('responseMessage').classList.add('error');
+                } else {
+                    document.getElementById('responseMessage').textContent = `Successfully taught: "${ans}" for "${ask}"`;
+                    document.getElementById('responseMessage').classList.remove('error');
+                }
+            } catch (error) {
+                document.getElementById('responseMessage').textContent = 'Failed to teach the bot. Try again later.';
+                document.getElementById('responseMessage').classList.add('error');
+            }
         });
-
-        const data = await response.json();
-
-        if (data.err) {
-          responseMessage.innerText = `Error: ${data.err}`;
-        } else {
-          responseMessage.innerText = `Successfully taught: "${ans}" for "${ask}"`;
-        }
-      } catch (error) {
-        responseMessage.innerText = 'Error: Failed to teach the bot. Try again later.';
-      }
-    });
-  </script>
+    </script>
 </body>
 </html>
