@@ -30,6 +30,11 @@ const messageSchema = new mongoose.Schema({
 
 const Message = mongoose.model('Message', messageSchema);
 
+// '/' রুট - হোম পেজ
+app.get('/', (req, res) => {
+  res.send('Welcome to the SMS API. Use /teach to add a message or /delete to remove a message.');
+});
+
 // /teach রুট - SMS টিচ করা
 app.post('/teach', async (req, res) => {
   try {
