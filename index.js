@@ -25,7 +25,7 @@ app.get('/api/chatbot', (req, res) => {
     const data = loadData();
 
     if (data[userMessage]) {
-        res.json({ reply: data[userMessage].response });
+        res.json({ reply: data[userMessage] });
     } else {
         res.json({ reply: "I don't know this yet! Try teaching me. 😊" });
     }
@@ -33,14 +33,14 @@ app.get('/api/chatbot', (req, res) => {
 
 // নতুন প্রশ্ন-উত্তর শেখানো
 app.post('/api/teach', (req, res) => {
-    const { question, answer, response } = req.body;
-    if (!question || !answer || !response) return res.json({ message: "Invalid input!" });
+    const { question, answer } = req.body;
+    if (!question || !answer) return res.json({ message: "Invalid input!" });
 
     const data = loadData();
-    data[question.toLowerCase()] = { answer, response }; // ছোট হাতের করে সেভ
+    data[question.toLowerCase()] = answer; // ছোট হাতের করে সেভ
     saveData(data);
 
-    res.json({ message: `Successfully taught: "${question}" -> "${response}"` });
+    res.json({ message: `Successfully taught: "${question}" -> "${answer}"` });
 });
 
 app.listen(PORT, () => {
