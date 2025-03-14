@@ -4,11 +4,11 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 
 const app = express();
-const PORT = 3000;  // নতুন পোর্ট নম্বর
+const PORT = 2040; // You can change the port number if needed
 const DATA_PATH = path.join(__dirname, 'data', 'sim.json');
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());  // JSON রিকোয়েস্ট হ্যান্ডেল করার জন্য
+app.use(express.json());
 
 // Default random responses in case input is not found
 const randomResponses = [
@@ -64,10 +64,11 @@ app.get('/chat', async (req, res) => {
 
 // Route to teach the system new responses
 app.post('/teach', async (req, res) => {
-  const { ask, ans } = req.body;
+  const ask = req.body.ask?.toLowerCase();
+  const ans = req.body.ans;
 
   if (!ask || !ans) {
-    return res.json({ err: 'Missing `ask` or `ans` body parameter!', Author: 'Anthony' });
+    return res.json({ err: 'Missing `ask` or `ans` body!', Author: 'Anthony' });
   }
 
   try {
@@ -82,23 +83,6 @@ app.post('/teach', async (req, res) => {
   } catch (error) {
     console.error("Error in /teach route:", error);
     return res.status(500).json({ err: 'Failed to teach', Author: 'Anthony' });
-  }
-});
-
-// Secret route to download JSON data
-const SECRET_ROUTE = Buffer.from('secret_route', 'utf8').toString('base64');
-app.get('/' + SECRET_ROUTE, async (req, res) => {
-  try {
-    if (!fsSync.existsSync(DATA_PATH)) {
-      return res.status(404).json({ error: 'Data file not found', Author: 'Anthony' });
-    }
-
-    res.setHeader('Content-Disposition', 'attachment; filename="sim.json"');
-    res.setHeader('Content-Type', 'application/json');
-    res.sendFile(DATA_PATH);
-  } catch (error) {
-    console.error("Error in secret route:", error);
-    return res.status(500).json({ error: 'Failed to process the download.', Author: 'Anthony' });
   }
 });
 
