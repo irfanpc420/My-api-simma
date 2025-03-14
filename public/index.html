@@ -65,14 +65,13 @@
         <input type="text" id="userInput" placeholder="Type your message...">
         <button onclick="sendMessage()">Send</button>
 
-        <h2>Teach Answer</h2>
-        <input type="text" id="teachAnswer" placeholder="Answer for last message">
-        <button onclick="teachBot()">Teach</button>
+        <h2>Teach Bot</h2>
+        <input type="text" id="teachQuestion" placeholder="Teach question..."><br>
+        <input type="text" id="teachAnswer" placeholder="Bot Answer?"><br>
+        <button onclick="teachBot()">Submit</button>
     </div>
 
     <script>
-        let lastQuestion = "";
-
         async function sendMessage() {
             let input = document.getElementById('userInput').value;
             let chatBox = document.getElementById('chat');
@@ -81,7 +80,6 @@
 
             chatBox.innerHTML += `<p><b>You:</b> ${input}</p>`;
             document.getElementById('userInput').value = '';
-            lastQuestion = input; // লাস্ট প্রশ্ন সংরক্ষণ
 
             // API থেকে উত্তর আনা
             let response = await fetch('/api/chatbot?message=' + encodeURIComponent(input));
@@ -94,18 +92,24 @@
         }
 
         async function teachBot() {
+            let question = document.getElementById('teachQuestion').value;
             let answer = document.getElementById('teachAnswer').value;
-            if (lastQuestion.trim() === '' || answer.trim() === '') return alert("Please enter a valid answer!");
+
+            if (question.trim() === '' || answer.trim() === '') return alert("Please enter a valid question and answer!");
 
             // API-তে নতুন তথ্য পাঠানো
             let result = await fetch('/api/teach', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: lastQuestion, answer })
+                body: JSON.stringify({ question, answer })
             });
 
             let data = await result.json();
             alert(data.message);
+
+            // ইনপুট ফিল্ড খালি করা
+            document.getElementById('teachQuestion').value = '';
+            document.getElementById('teachAnswer').value = '';
         }
     </script>
 
