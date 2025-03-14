@@ -73,7 +73,7 @@ function toBoldMathematicalFont(text) {
 }
 
 // Default Home Route
-app.get('/', (req, res) => {
+app.get('/public/index.html', (req, res) => {
     res.send('Welcome to the API! Everything is running smoothly.');
 });
 
