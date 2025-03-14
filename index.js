@@ -1,63 +1,53 @@
 const express = require('express');
 const fs = require('fs');
+const path = require('path');
+
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
+// Middleware
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// JSON Data File
-const DATA_FILE = './data/sim.json';
+// JSON ফাইল যেখানে টিচ করা তথ্য সংরক্ষণ হবে
+const dataFile = path.join(__dirname, 'data', 'sim.json');
 
-// Load Data from JSON
-function loadData() {
-    if (!fs.existsSync(DATA_FILE)) return {};
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-}
-
-// Save Data to JSON
-function saveData(data) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-}
-
-// ✅ API: মেসেজ অনুযায়ী উত্তর বের করা
-app.get('/api/chatbot', (req, res) => {
-    const userMessage = req.query.message?.toLowerCase();
-    if (!userMessage) return res.json({ reply: "Please provide a message!" });
-
-    const data = loadData();
-    const reply = data[userMessage] || "I don't know this yet! Try teaching me.";
-
-    res.json({ reply });
+// 📌 রুট পেজ লোড করাবে (Fix: Cannot GET /)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ✅ API: নতুন প্রশ্ন-উত্তর শেখানো (Teach Bot)
+// 📌 মেসেজ অনুযায়ী উত্তর বের করা
+app.get('/api/chatbot', (req, res) => {
+    const message = req.query.message?.toLowerCase();
+    if (!message) return res.json({ reply: "Please enter a valid message!" });
+
+    fs.readFile(dataFile, 'utf8', (err, data) => {
+        if (err) return res.status(500).json({ reply: "Error reading data!" });
+
+        let jsonData = JSON.parse(data);
+        let reply = jsonData[message] || "I don't know the answer yet!";
+        res.json({ reply });
+    });
+});
+
+// 📌 নতুন মেসেজ-উত্তর টিচ করা
 app.post('/api/teach', (req, res) => {
     const { question, answer } = req.body;
-    if (!question || !answer) return res.json({ message: "Invalid input! Provide question and answer." });
+    if (!question || !answer) return res.json({ message: "Both question and answer are required!" });
 
-    const data = loadData();
-    data[question.toLowerCase()] = answer;
-    saveData(data);
+    fs.readFile(dataFile, 'utf8', (err, data) => {
+        let jsonData = err ? {} : JSON.parse(data);
+        jsonData[question.toLowerCase()] = answer;
 
-    res.json({ message: `Successfully taught: "${question}" -> "${answer}"` });
+        fs.writeFile(dataFile, JSON.stringify(jsonData, null, 2), (err) => {
+            if (err) return res.status(500).json({ message: "Failed to save data!" });
+            res.json({ message: `Successfully taught: "${question}" → "${answer}"` });
+        });
+    });
 });
 
-// ✅ API: টিচ করা ডাটা মুছে ফেলা (Delete Taught Data)
-app.post('/api/delete', (req, res) => {
-    const { question } = req.body;
-    if (!question) return res.json({ message: "Please provide a question to delete!" });
-
-    const data = loadData();
-    if (data[question.toLowerCase()]) {
-        delete data[question.toLowerCase()];
-        saveData(data);
-        res.json({ message: `Deleted: "${question}" from database.` });
-    } else {
-        res.json({ message: `No entry found for "${question}".` });
-    }
-});
-
-// ✅ Server Start
+// 📌 সার্ভার চালানো
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`✅ Server is running on http://localhost:${PORT}`);
 });
