@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const axios = require('axios');
@@ -8,8 +9,14 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
+
+// Serve static files (e.g., HTML, CSS, JS)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Define API Routes
 
 const DATA_FILE = 'data.json';
 
@@ -68,13 +75,18 @@ function evaluateMath(expression) {
 // Bold Mathematical Font
 function toBoldMathematicalFont(text) {
     const normal = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const bold = '𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗌𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘷𝘄𝘅𝘆𝘇123456789';
+    const bold = '𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘷𝘄𝘅𝘆𝘇123456789';
     return text.split('').map(char => (normal.includes(char) ? bold[normal.indexOf(char)] : char)).join('');
 }
 
 // Default Home Route
 app.get('/', (req, res) => {
     res.send('Welcome to the API! Everything is running smoothly.');
+});
+
+// Serve a simple HTML page for testing purposes (in the "public" folder)
+app.get('/public/index.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Teach API (Store input-response in JSON)
@@ -103,7 +115,7 @@ app.post('/teach', async (req, res) => {
     }
 });
 
-// Handle 404 Errors (Ensure this is the last route)
+// Handle 404 Errors
 app.use((req, res) => {
     res.status(404).json({ error: "Route not found." });
 });
