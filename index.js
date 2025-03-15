@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');  // axios ইনস্টল করতে হবে
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -31,7 +32,7 @@ app.get('/api/chatbot', (req, res) => {
     });
 });
 
-// 📌 নতুন মেসেজ-উত্তর টিচ করা
+// 📌 নতুন মেসেজ-উত্তর টিচ করা (Teach API)
 app.post('/api/teach', (req, res) => {
     const { question, answer } = req.body;
     if (!question || !answer) return res.json({ message: "Both question and answer are required!" });
@@ -45,6 +46,29 @@ app.post('/api/teach', (req, res) => {
             res.json({ message: `Successfully taught: "${question}" → "${answer}"` });
         });
     });
+});
+
+// 📌 Teach Command (Teach API)
+app.post('/api/teachCommand', async (req, res) => {
+    const { question, answer } = req.body;
+
+    if (!question || !answer) return res.status(400).json({ message: "Question and Answer are required." });
+
+    try {
+        // API কল করে ডেটা সেভ করা
+        const apiResponse = await axios.post('http://localhost:3001/api/teach', {
+            question: question,
+            answer: answer
+        });
+
+        if (apiResponse.data) {
+            res.status(200).json({ message: `Successfully taught: "${question}" → "${answer}"` });
+        } else {
+            res.status(500).json({ message: "Failed to save teach data." });
+        }
+    } catch (err) {
+        res.status(500).json({ message: "An error occurred while saving teach data." });
+    }
 });
 
 // 📌 সার্ভার চালানো
