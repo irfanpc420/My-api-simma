@@ -17,7 +17,9 @@ app.use(bodyParser.json());
 const simFilePath = 'data/sim.json'; // Path to local file
 
 // MongoDB connection
-mongoose.connect('your_mongodb_connection_string', {
+const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
+
+mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
