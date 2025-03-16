@@ -1,5 +1,0 @@
-{
-  "MONGODB_URI": "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority",
-  "PORT": 2040,
-  "SECRET_ROUTE": "secret_route"
-}
