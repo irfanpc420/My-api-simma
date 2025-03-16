@@ -3,45 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teach & Reply</title>
-    <script>
-        async function teachMessage() {
-            const message = document.getElementById("teachMessage").value;
-            const reply = document.getElementById("teachReply").value;
-
-            const response = await fetch('/teach', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, reply })
-            });
-
-            const result = await response.text();
-            alert(result);
+    <title>Chatbot</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
         }
-
-        async function getReply() {
-            const message = document.getElementById("getMessage").value;
-
-            const response = await fetch(`/reply?message=${message}`);
-            const result = await response.json();
-
-            if (result.reply) {
-                document.getElementById("replyResult").innerText = "Reply: " + result.reply;
-            } else {
-                document.getElementById("replyResult").innerText = "No reply found!";
-            }
+        .container {
+            width: 90%;
+            max-width: 400px;
+            margin: 20px auto;
         }
-    </script>
+        .chatbox {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 10px;
+            min-height: 200px;
+            overflow-y: auto;
+            text-align: left;
+        }
+        .input-box {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+        }
+        .send-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: linear-gradient(to right, #ff416c, #ff4b2b);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <h2>Teach a Message</h2>
-    <input type="text" id="teachMessage" placeholder="Message">
-    <input type="text" id="teachReply" placeholder="Reply">
-    <button onclick="teachMessage()">Teach</button>
 
-    <h2>Check a Reply</h2>
-    <input type="text" id="getMessage" placeholder="Message">
-    <button onclick="getReply()">Get Reply</button>
-    <p id="replyResult"></p>
+    <h1>Chatbot</h1>
+    <div class="container">
+        <div class="chatbox" id="chatbox">
+            <p><b>Bot:</b> Hi! My Name Is 🏆 <b style="color: cyan;">VEX ADNAN</b> 🏆. What's your name?</p>
+        </div>
+        <input type="text" id="userInput" class="input-box" placeholder="Type your message...">
+        <button class="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+
+    <h2>Teach the Bot</h2>
+    <div class="container">
+        <input type="text" id="teachQuestion" class="input-box" placeholder="Question (ask)">
+        <input type="text" id="teachAnswer" class="input-box" placeholder="Answer (ans)">
+        <button class="send-btn" onclick="teachBot()">Teach</button>
+    </div>
+
+    <script>
+        function sendMessage() {
+            const userInput = document.getElementById('userInput').value;
+            if (!userInput) return;
+
+            const chatbox = document.getElementById('chatbox');
+            chatbox.innerHTML += `<p><b>You:</b> ${userInput}</p>`;
+
+            fetch(`/reply?message=${encodeURIComponent(userInput)}`)
+                .then(response => response.json())
+                .then(data => {
+                    chatbox.innerHTML += `<p><b>Bot:</b> ${data.reply}</p>`;
+                    chatbox.scrollTop = chatbox.scrollHeight;
+                })
+                .catch(() => {
+                    chatbox.innerHTML += `<p><b>Bot:</b> Sorry, I don't know the answer.</p>`;
+                });
+
+            document.getElementById('userInput').value = '';
+        }
+
+        function teachBot() {
+            const question = document.getElementById('teachQuestion').value;
+            const answer = document.getElementById('teachAnswer').value;
+            if (!question || !answer) return alert("Please enter a question and answer!");
+
+            fetch('/teach', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: question, reply: answer })
+            })
+            .then(response => response.text())
+            .then(data => alert(data))
+            .catch(() => alert("Error saving message!"));
+        }
+    </script>
+
 </body>
 </html>
