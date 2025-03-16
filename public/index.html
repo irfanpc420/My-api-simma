@@ -1,102 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot</title>
-    <style>
-        body {
-            background-color: #121212;
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        .container {
-            width: 90%;
-            max-width: 400px;
-            margin: 20px auto;
-        }
-        .chatbox {
-            background-color: #1e1e1e;
-            border-radius: 10px;
-            padding: 10px;
-            min-height: 200px;
-            overflow-y: auto;
-            text-align: left;
-        }
-        .input-box {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            border: none;
-            border-radius: 5px;
-        }
-        .send-btn {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            background: linear-gradient(to right, #ff416c, #ff4b2b);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bot API Test</title>
 </head>
 <body>
+  <h1>Bot API Test</h1>
+  
+  <h2>Teach the bot:</h2>
+  <form id="teachForm">
+    <input type="text" id="teachMessage" placeholder="Enter message" required><br>
+    <input type="text" id="teachReply" placeholder="Enter reply" required><br>
+    <button type="submit">Teach</button>
+  </form>
 
-    <h1>Chatbot</h1>
-    <div class="container">
-        <div class="chatbox" id="chatbox">
-            <p><b>Bot:</b> Hi! My Name Is 🏆 <b style="color: cyan;">VEX ADNAN</b> 🏆. What's your name?</p>
-        </div>
-        <input type="text" id="userInput" class="input-box" placeholder="Type your message...">
-        <button class="send-btn" onclick="sendMessage()">Send</button>
-    </div>
+  <h2>Get reply from the bot:</h2>
+  <form id="replyForm">
+    <input type="text" id="replyMessage" placeholder="Enter message to get reply" required><br>
+    <button type="submit">Get Reply</button>
+  </form>
 
-    <h2>Teach the Bot</h2>
-    <div class="container">
-        <input type="text" id="teachQuestion" class="input-box" placeholder="Question (ask)">
-        <input type="text" id="teachAnswer" class="input-box" placeholder="Answer (ans)">
-        <button class="send-btn" onclick="teachBot()">Teach</button>
-    </div>
+  <div id="response"></div>
 
-    <script>
-        function sendMessage() {
-            const userInput = document.getElementById('userInput').value;
-            if (!userInput) return;
+  <script>
+    document.getElementById('teachForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const message = document.getElementById('teachMessage').value;
+      const reply = document.getElementById('teachReply').value;
 
-            const chatbox = document.getElementById('chatbox');
-            chatbox.innerHTML += `<p><b>You:</b> ${userInput}</p>`;
+      fetch('/teach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, reply }),
+      })
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('response').textContent = data;
+      })
+      .catch(error => console.error('Error:', error));
+    });
 
-            fetch(`/reply?message=${encodeURIComponent(userInput)}`)
-                .then(response => response.json())
-                .then(data => {
-                    chatbox.innerHTML += `<p><b>Bot:</b> ${data.reply}</p>`;
-                    chatbox.scrollTop = chatbox.scrollHeight;
-                })
-                .catch(() => {
-                    chatbox.innerHTML += `<p><b>Bot:</b> Sorry, I don't know the answer.</p>`;
-                });
+    document.getElementById('replyForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const message = document.getElementById('replyMessage').value;
 
-            document.getElementById('userInput').value = '';
-        }
-
-        function teachBot() {
-            const question = document.getElementById('teachQuestion').value;
-            const answer = document.getElementById('teachAnswer').value;
-            if (!question || !answer) return alert("Please enter a question and answer!");
-
-            fetch('/teach', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: question, reply: answer })
-            })
-            .then(response => response.text())
-            .then(data => alert(data))
-            .catch(() => alert("Error saving message!"));
-        }
-    </script>
-
+      fetch('/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('response').textContent = data.reply;
+      })
+      .catch(error => console.error('Error:', error));
+    });
+  </script>
 </body>
 </html>
