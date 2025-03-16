@@ -1,11 +1,11 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
-const fsSync = require('fs');
 const { MongoClient, ServerApiVersion } = require('mongodb');
-const uri = "mongodb+srv://irfan:<irfana>@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+// MongoDB URI সরাসরি কোডে দেওয়া
+const uri = "mongodb+srv://irfan:<your-password>@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
+
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -16,36 +16,35 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server
     await client.connect();
-    // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    console.log("MongoDB-তে সফলভাবে সংযোগ হয়েছে!");
   } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
+    console.error("MongoDB-তে সংযোগে সমস্যা:", error);
   }
 }
 
 run().catch(console.dir);
 
 const app = express();
-const PORT = 2040;
+const PORT = 2040; // পোর্ট সরাসরি কোডে সেট করা
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Default random responses in case input is not found
+// ডিফল্ট রেসপন্স (যদি ইনপুট না থাকে)
 const randomResponses = [
-  "I don't know the answer to that.",
-  "Can you teach me?",
-  "I'm not sure, but I'm learning!",
-  "Interesting question! Try again.",
-  "I'm still learning. Can you help?"
+  "আমি তার উত্তর জানি না।",
+  "আপনি আমাকে শিখাতে পারেন?",
+  "আমি নিশ্চিত না, তবে আমি শিখছি!",
+  "আসলেই মজার প্রশ্ন! আবার চেষ্টা করুন।",
+  "আমি এখনও শিখছি। আপনি কি সাহায্য করতে পারেন?"
 ];
 
-// MongoDB Connection Check
+// MongoDB সংযোগ
 const database = client.db("chatDB");
 const collection = database.collection("responses");
 
+// ফাইল আছে কিনা চেক করার ফাংশন
 const fileExists = async (filePath) => {
   try {
     await fs.access(filePath);
@@ -55,7 +54,7 @@ const fileExists = async (filePath) => {
   }
 };
 
-// Route to get a response based on user input
+// রুট: ব্যবহারকারীর প্রশ্নের ভিত্তিতে উত্তর প্রদান
 app.get('/chat', async (req, res) => {
   try {
     const ask = req.query.ask?.toLowerCase();
@@ -80,11 +79,11 @@ app.get('/chat', async (req, res) => {
   }
 });
 
-// Route to teach the system new responses
+// রুট: নতুন উত্তর শেখানোর জন্য
 app.get('/teach', async (req, res) => {
   const ask = req.query.ask?.toLowerCase();
   const ans = req.query.ans;
-  
+
   if (!ask || !ans) {
     return res.json({ err: 'Missing ask or ans query!', Author: 'IRFAN' });
   }
