@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const bodyParser = require('body-parser');
+const path = require('path');  // Add this line
 
 // MongoDB Schema
 const messageSchema = new mongoose.Schema({
@@ -32,6 +33,9 @@ mongoose.connection.on('connected', () => {
 mongoose.connection.on('error', (err) => {
   console.error('MongoDB connection error:', err);
 });
+
+// Serve static files from the "public" directory
+app.use(express.static(path.join(__dirname, 'public')));  // Add this line to serve static files
 
 // Load messages from MongoDB to sim.json on startup
 const loadMessagesToSimJson = async () => {
