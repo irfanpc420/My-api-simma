@@ -1,120 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teach Bot</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f9;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #fff;
-      padding: 20px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    label {
-      display: block;
-      margin: 10px 0 5px;
-    }
-    input, textarea {
-      width: 100%;
-      padding: 10px;
-      margin: 5px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      cursor: pointer;
-      border-radius: 5px;
-      font-size: 16px;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    .response-container {
-      margin-top: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teach & Reply</title>
+    <script>
+        async function teachMessage() {
+            const message = document.getElementById("teachMessage").value;
+            const reply = document.getElementById("teachReply").value;
+
+            const response = await fetch('/teach', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, reply })
+            });
+
+            const result = await response.text();
+            alert(result);
+        }
+
+        async function getReply() {
+            const message = document.getElementById("getMessage").value;
+
+            const response = await fetch(`/reply?message=${message}`);
+            const result = await response.json();
+
+            if (result.reply) {
+                document.getElementById("replyResult").innerText = "Reply: " + result.reply;
+            } else {
+                document.getElementById("replyResult").innerText = "No reply found!";
+            }
+        }
+    </script>
 </head>
 <body>
-  <h1>Teach Your Bot</h1>
-  <div class="container">
-    <h2>Teach Message</h2>
-    <label for="message">Message</label>
-    <input type="text" id="message" placeholder="Enter the message to teach" required>
-    
-    <label for="reply">Reply</label>
-    <textarea id="reply" placeholder="Enter the reply for the message" required></textarea>
+    <h2>Teach a Message</h2>
+    <input type="text" id="teachMessage" placeholder="Message">
+    <input type="text" id="teachReply" placeholder="Reply">
+    <button onclick="teachMessage()">Teach</button>
 
-    <button onclick="teachMessage()">Teach Message</button>
-    
-    <div class="response-container">
-      <h2>Check Reply</h2>
-      <label for="checkMessage">Enter Message to Check Reply</label>
-      <input type="text" id="checkMessage" placeholder="Enter message to check reply">
-      <button onclick="checkReply()">Check Reply</button>
-      
-      <p id="replyResponse"></p>
-    </div>
-  </div>
-
-  <script>
-    // Function to teach a new message
-    async function teachMessage() {
-      const message = document.getElementById('message').value;
-      const reply = document.getElementById('reply').value;
-      
-      if (message && reply) {
-        try {
-          const response = await fetch('http://localhost:3000/teach', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ message, reply })
-          });
-          
-          const result = await response.text();
-          alert(result);
-          document.getElementById('message').value = '';
-          document.getElementById('reply').value = '';
-        } catch (error) {
-          alert('Error teaching message');
-        }
-      } else {
-        alert('Please enter both message and reply');
-      }
-    }
-
-    // Function to check reply for a message
-    async function checkReply() {
-      const message = document.getElementById('checkMessage').value;
-
-      if (message) {
-        try {
-          const response = await fetch(`http://localhost:3000/reply?message=${encodeURIComponent(message)}`);
-          const data = await response.json();
-          document.getElementById('replyResponse').innerText = `Reply: ${data.reply}`;
-        } catch (error) {
-          document.getElementById('replyResponse').innerText = 'No reply found!';
-        }
-      } else {
-        alert('Please enter a message to check reply');
-      }
-    }
-  </script>
+    <h2>Check a Reply</h2>
+    <input type="text" id="getMessage" placeholder="Message">
+    <button onclick="getReply()">Get Reply</button>
+    <p id="replyResult"></p>
 </body>
 </html>
