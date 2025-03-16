@@ -6,8 +6,8 @@ const axios = require('axios');  // axios ইনস্টল করতে হব
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// MongoDB URI (Environment Variable থেকে নেবে)
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
+// MongoDB URI (এখানে সরাসরি সেট করা হয়েছে)
+const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
 
 // MongoDB কানেকশন সেটআপ
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
