@@ -1,1 +1,6 @@
-
+{
+    "hello": ["Hi there!", "Hello!", "Hey! How can I help?"],
+    "how are you": ["I'm just a bot, but I'm doing well!", "Feeling great!"],
+    "what is your name": ["I'm your friendly chatbot!", "Call me ChatBot!", "My name is whatever you want it to be!"],
+    "bye": ["Goodbye!", "See you later!", "Take care!"]
+}
