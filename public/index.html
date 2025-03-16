@@ -5,79 +5,101 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bot API Test</title>
   <style>
+    /* General Styles */
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f9;
-      color: #333;
+      font-family: 'Arial', sans-serif;
+      background-color: #f9f9f9;
       margin: 0;
       padding: 0;
+      color: #333;
     }
 
+    /* Header Styles */
     header {
-      background-color: #333;
-      color: white;
-      padding: 10px 0;
+      background-color: #2c3e50;
+      color: #fff;
+      padding: 15px 0;
       text-align: center;
     }
 
     h1 {
       margin: 0;
+      font-size: 36px;
     }
 
     .container {
-      width: 80%;
+      width: 85%;
       margin: 0 auto;
       padding: 20px;
     }
 
-    h2 {
-      color: #444;
-    }
-
+    /* Form Styles */
     form {
       background-color: #fff;
       padding: 20px;
       margin-bottom: 20px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       border-radius: 8px;
+      transition: all 0.3s ease;
     }
 
-    input[type="text"] {
-      width: calc(100% - 22px);
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 4px;
-      border: 1px solid #ddd;
-      font-size: 14px;
-    }
-
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      text-align: center;
-      text-decoration: none;
-      display: inline-block;
-      font-size: 16px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-
-    #response {
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #f1f1f1;
-      border-radius: 4px;
-      border: 1px solid #ddd;
+    form:hover {
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
     }
 
     .form-group {
-      margin-bottom: 15px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #27ae60;
+      color: white;
+      padding: 12px 25px;
+      border: none;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #2ecc71;
+    }
+
+    /* Response and Status Messages */
+    #response, .status-message {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      background-color: #ecf0f1;
+      color: #333;
+      font-size: 16px;
+      border: 1px solid #ccc;
+    }
+
+    .success {
+      background-color: #d4edda;
+      border-color: #c3e6cb;
+    }
+
+    .error {
+      background-color: #f8d7da;
+      border-color: #f5c6cb;
+    }
+
+    .warning {
+      background-color: #fff3cd;
+      border-color: #ffeeba;
     }
   </style>
 </head>
@@ -87,7 +109,8 @@
   </header>
 
   <div class="container">
-    <h2>Teach the bot:</h2>
+    <!-- Teach the bot -->
+    <h2>Teach the Bot:</h2>
     <form id="teachForm">
       <div class="form-group">
         <input type="text" id="teachMessage" placeholder="Enter message" required>
@@ -98,6 +121,7 @@
       <button type="submit">Teach</button>
     </form>
 
+    <!-- Get reply from the bot -->
     <h2>Get reply from the bot:</h2>
     <form id="replyForm">
       <div class="form-group">
@@ -106,7 +130,11 @@
       <button type="submit">Get Reply</button>
     </form>
 
+    <!-- Response area -->
     <div id="response"></div>
+
+    <!-- Status message area -->
+    <div class="status-message" id="statusMessage"></div>
   </div>
 
   <script>
@@ -123,10 +151,11 @@
       .then(response => response.text())
       .then(data => {
         document.getElementById('response').textContent = data;
+        showStatusMessage('Success! The bot has been taught.', 'success');
       })
       .catch(error => {
         console.error('Error:', error);
-        document.getElementById('response').textContent = 'Error: Could not teach the bot.';
+        showStatusMessage('Error: Could not teach the bot.', 'error');
       });
     });
 
@@ -146,12 +175,20 @@
         } else {
           document.getElementById('response').textContent = 'No reply found for this message.';
         }
+        showStatusMessage('Reply received successfully.', 'success');
       })
       .catch(error => {
         console.error('Error:', error);
-        document.getElementById('response').textContent = 'Error: Could not get reply.';
+        showStatusMessage('Error: Could not get reply.', 'error');
       });
     });
+
+    // Function to show status messages
+    function showStatusMessage(message, type) {
+      const statusElement = document.getElementById('statusMessage');
+      statusElement.textContent = message;
+      statusElement.className = `status-message ${type}`;
+    }
   </script>
 </body>
 </html>
