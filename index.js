@@ -4,7 +4,7 @@ const fs = require('fs').promises;
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 // MongoDB URI সরাসরি কোডে দেওয়া
-const uri = "mongodb+srv://irfan:<your-password>@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
+const uri = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
 
 const client = new MongoClient(uri, {
   serverApi: {
