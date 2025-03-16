@@ -14,7 +14,8 @@ mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log("✅ MongoDB Connected Successfully!"))
     .catch(err => {
         console.error("❌ MongoDB Connection Error:", err);
-        process.exit(1);  // MongoDB কানেকশন ত্রুটি হলে সার্ভার বন্ধ করে দিবে
+        // সার্ভার বন্ধ না করে মেসেজ পাঠানো
+        console.log("❌ MongoDB কানেক্ট হয়নি, সার্ভার চালু হচ্ছে না!");
     });
 
 // মডেল ডিফাইন (Question & Answer)
@@ -73,7 +74,9 @@ app.post('/api/teachCommand', async (req, res) => {
     }
 });
 
-// 📌 সার্ভার চালানো
-app.listen(PORT, () => {
-    console.log(✅ Server is running on http://localhost:${PORT});
+// 📌 সার্ভার চালানো (MongoDB কানেকশন সফল হলে সার্ভার চালু হবে)
+mongoose.connection.once('open', () => {
+    app.listen(PORT, () => {
+        console.log(✅ Server is running on http://localhost:${PORT});
+    });
 });
