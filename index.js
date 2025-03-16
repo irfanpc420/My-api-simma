@@ -7,7 +7,7 @@ const app = express();
 const PORT = 2040;
 
 // MongoDB URI - আপনার MongoDB URI এখানে দিন
-const MONGO_URI = 'mongodb://localhost:27017/chatbot';
+const MONGO_URI = 'mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan';
 
 // MongoDB Schema এবং Model তৈরি
 const answerSchema = new mongoose.Schema({
