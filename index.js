@@ -14,6 +14,7 @@ mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log("✅ MongoDB Connected Successfully!"))
     .catch(err => {
         console.error("❌ MongoDB Connection Error:", err);
+        // Connection error হলে সার্ভার বন্ধ হবে না
     });
 
 // মডেল ডিফাইন (Question & Answer)
@@ -27,7 +28,7 @@ const TeachModel = mongoose.model("Teach", TeachSchema);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 📌 রুট পেজ লোড করাবে (Fix: Cannot GET /)
+// 📌 রুট পেজ লোড করাবে
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
