@@ -11,11 +11,13 @@ const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrit
 
 // MongoDB কানেকশন সেটআপ
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log("✅ MongoDB Connected Successfully!"))
+    .then(() => {
+        console.log("✅ MongoDB Connected Successfully!");
+    })
     .catch(err => {
         console.error("❌ MongoDB Connection Error:", err);
-        // সার্ভার বন্ধ না করে মেসেজ পাঠানো
-        console.log("MongoDB কানেকশন করা সম্ভব হয়নি। সার্ভার চালু রাখা হয়েছে।");
+        // MongoDB কানেকশনের সমস্যা হলে মেসেজ পাঠানো
+        console.log("MongoDB কানেকশন করা সম্ভব হয়নি, তবে সার্ভার চলতে থাকবে।");
     });
 
 // মডেল ডিফাইন (Question & Answer)
@@ -29,7 +31,7 @@ const TeachModel = mongoose.model("Teach", TeachSchema);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 📌 রুট পেজ লোড করাবে (Fix: Cannot GET /)
+// 📌 রুট পেজ লোড করাবে
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
