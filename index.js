@@ -3,14 +3,13 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
-const rateLimit = require('express-rate-limit'); // Rate limiting প্যাকেজ
 
 const app = express();
 
 // MongoDB URI
 const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
 
-// MongoDB setup with updated options
+// MongoDB setup with options
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -24,15 +23,6 @@ app.use(bodyParser.json());
 // Serve static files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rate limiting middleware to avoid too many requests
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 মিনিট
-  max: 100, // প্রতি 15 মিনিটে 100 রিকোয়েস্ট অনুমোদিত
-  message: 'Too many requests, please try again later.'
-});
-
-app.use(limiter);
-
 // MongoDB Message Model
 const messageSchema = new mongoose.Schema({
   message: String,
@@ -40,6 +30,34 @@ const messageSchema = new mongoose.Schema({
 });
 
 const Message = mongoose.model('Message', messageSchema);
+
+// Load existing messages from MongoDB to sim.json
+const loadMessagesToSimJson = async () => {
+  try {
+    const messages = await Message.find({});
+    const simFilePath = path.join(__dirname, 'data/sim.json');
+    const simData = {
+      messages: messages.map(msg => ({ message: msg.message, reply: msg.reply }))
+    };
+    fs.writeFileSync(simFilePath, JSON.stringify(simData, null, 2));
+    console.log('Messages loaded into sim.json');
+  } catch (err) {
+    console.log('Error loading messages from MongoDB to sim.json:', err);
+  }
+};
+
+// Load existing data from sim.json at startup
+const loadSimJson = () => {
+  const simFilePath = path.join(__dirname, 'data/sim.json');
+  if (fs.existsSync(simFilePath)) {
+    const data = fs.readFileSync(simFilePath, 'utf8');
+    return JSON.parse(data);
+  } else {
+    return { messages: [] };
+  }
+};
+
+let simData = loadSimJson(); // Initialize simData from sim.json
 
 // POST /teach: Save message and reply to MongoDB and sim.json
 app.post('/teach', async (req, res) => {
@@ -52,46 +70,25 @@ app.post('/teach', async (req, res) => {
 
     // Save to sim.json
     const simFilePath = path.join(__dirname, 'data/sim.json');
-    fs.readFile(simFilePath, 'utf8', (err, data) => {
-      if (err) return res.status(500).send('Error reading sim.json');
+    simData.messages.push({ message, reply });
+    fs.writeFileSync(simFilePath, JSON.stringify(simData, null, 2));
 
-      let jsonData = JSON.parse(data);
-      jsonData.messages.push({ message, reply });
-
-      fs.writeFile(simFilePath, JSON.stringify(jsonData, null, 2), (err) => {
-        if (err) return res.status(500).send('Error saving to sim.json');
-        res.status(200).send('Message saved successfully!');
-      });
-    });
+    res.status(200).send('Message saved successfully!');
   } catch (err) {
     res.status(500).send('Error saving message!');
   }
 });
 
-// GET /reply: Fetch reply based on the message from MongoDB or sim.json
-app.get('/reply', async (req, res) => {
+// GET /reply: Fetch reply based on the message from sim.json
+app.get('/reply', (req, res) => {
   const { message } = req.query;
 
-  try {
-    // Check in MongoDB
-    const replyData = await Message.findOne({ message });
-    if (replyData) return res.json({ reply: replyData.reply });
-
-    // If not found in MongoDB, check sim.json
-    const simFilePath = path.join(__dirname, 'data/sim.json');
-    fs.readFile(simFilePath, 'utf8', (err, data) => {
-      if (err) return res.status(500).send('Error reading sim.json');
-
-      let jsonData = JSON.parse(data);
-      const messageData = jsonData.messages.find(m => m.message === message);
-      if (messageData) {
-        return res.json({ reply: messageData.reply });
-      } else {
-        return res.status(404).send('No reply found!');
-      }
-    });
-  } catch (err) {
-    res.status(500).send('Error fetching reply!');
+  // Check in sim.json
+  const messageData = simData.messages.find(m => m.message === message);
+  if (messageData) {
+    return res.json({ reply: messageData.reply });
+  } else {
+    return res.status(404).send('No reply found!');
   }
 });
 
@@ -104,4 +101,6 @@ app.get('/', (req, res) => {
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+  // Load messages from MongoDB into sim.json at startup
+  loadMessagesToSimJson();
 });
