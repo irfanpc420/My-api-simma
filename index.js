@@ -31,12 +31,9 @@ mongoose.connection.on('connected', () => {
 });
 
 // Load messages from MongoDB to sim.json on startup
-function loadMessagesToSimJson() {
-  Message.find({}, (err, messages) => {
-    if (err) {
-      console.error('Error loading messages from MongoDB:', err);
-      return;
-    }
+async function loadMessagesToSimJson() {
+  try {
+    const messages = await Message.find({});
     // Read the current sim.json file
     fs.readFile('data/sim.json', 'utf8', (err, data) => {
       if (err) {
@@ -66,7 +63,9 @@ function loadMessagesToSimJson() {
         }
       });
     });
-  });
+  } catch (err) {
+    console.error('Error loading messages from MongoDB:', err);
+  }
 }
 
 // API to teach the bot a new message and reply
