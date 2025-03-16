@@ -1,79 +1,111 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
-const axios = require('axios');  // axios ইনস্টল করতে হবে
+const fs = require('fs').promises;
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = 2040;
 
-// MongoDB URI (এখানে সরাসরি MongoDB URI দেওয়া হয়েছে)
-const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
+// MongoDB URI - আপনার MongoDB URI এখানে দিন
+const MONGO_URI = 'mongodb://localhost:27017/chatbot';
 
-// MongoDB কানেকশন সেটআপ
+// MongoDB Schema এবং Model তৈরি
+const answerSchema = new mongoose.Schema({
+  ask: { type: String, required: true },
+  answers: [{ type: String }]
+});
+const Answer = mongoose.model('Answer', answerSchema);
+
+// MongoDB এর সাথে সংযোগ স্থাপন
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log("✅ MongoDB Connected Successfully!"))
-    .catch(err => {
-        console.error("❌ MongoDB Connection Error:", err);
-        // Connection error হলে সার্ভার বন্ধ হবে না
-    });
+  .then(() => {
+    console.log("MongoDB connected successfully");
+  })
+  .catch(err => {
+    console.error("MongoDB connection error:", err);
+  });
 
-// মডেল ডিফাইন (Question & Answer)
-const TeachSchema = new mongoose.Schema({
-    question: { type: String, required: true, unique: true },
-    answer: { type: String, required: true }
-});
-const TeachModel = mongoose.model("Teach", TeachSchema);
-
-// Middleware
-app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());  // JSON প্যারামিটার পাওয়ার জন্য
 
-// 📌 রুট পেজ লোড করাবে
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// Default random responses in case input is not found
+const randomResponses = [
+  "I don't know the answer to that.",
+  "Can you teach me?",
+  "I'm not sure, but I'm learning!",
+  "Interesting question! Try again.",
+  "I'm still learning. Can you help?"
+];
 
-// 📌 মেসেজ অনুযায়ী উত্তর বের করা (MongoDB থেকে)
-app.get('/api/chatbot', async (req, res) => {
-    const message = req.query.message?.toLowerCase();
-    if (!message) return res.json({ reply: "Please enter a valid message!" });
+// Route to get a response based on user input
+app.get('/chat', async (req, res) => {
+  try {
+    const ask = req.query.ask?.toLowerCase();
+    let response;
 
-    try {
-        const response = await TeachModel.findOne({ question: message });
-        res.json({ reply: response ? response.answer : "I don't know the answer yet!" });
-    } catch (err) {
-        res.status(500).json({ reply: "Error fetching data from MongoDB!" });
+    if (ask) {
+      const result = await Answer.findOne({ ask: ask });
+      if (result) {
+        const randomIndex = Math.floor(Math.random() * result.answers.length);
+        response = result.answers[randomIndex];
+      } else {
+        response = randomResponses[Math.floor(Math.random() * randomResponses.length)];
+      }
+    } else {
+      response = randomResponses[Math.floor(Math.random() * randomResponses.length)];
     }
+
+    return res.json({ respond: response, Author: 'Anthony' });
+  } catch (error) {
+    console.error("Error in /chat route:", error);
+    return res.status(500).json({ respond: 'Internal Server Error', Author: 'Anthony' });
+  }
 });
 
-// 📌 নতুন মেসেজ-উত্তর টিচ করা (MongoDB তে সংরক্ষণ)
-app.post('/api/teach', async (req, res) => {
-    const { question, answer } = req.body;
-    if (!question || !answer) return res.json({ message: "Both question and answer are required!" });
+// Route to teach the system new responses
+app.get('/teach', async (req, res) => {
+  const ask = req.query.ask?.toLowerCase();
+  const ans = req.query.ans;
+  
+  if (!ask || !ans) {
+    return res.json({ err: 'Missing ask or ans query!', Author: 'Anthony' });
+  }
 
-    try {
-        const newTeach = new TeachModel({ question: question.toLowerCase(), answer });
-        await newTeach.save();
-        res.json({ message: Successfully taught: "${question}" → "${answer}" });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to save data to MongoDB!" });
+  try {
+    let result = await Answer.findOne({ ask: ask });
+    
+    if (!result) {
+      result = new Answer({ ask: ask, answers: [] });
     }
-});
 
-// 📌 Teach Command (Teach API)
-app.post('/api/teachCommand', async (req, res) => {
-    const { question, answer } = req.body;
-    if (!question || !answer) return res.status(400).json({ message: "Question and Answer are required." });
-
-    try {
-        const apiResponse = await axios.post('http://localhost:3001/api/teach', { question, answer });
-        res.json(apiResponse.data);
-    } catch (err) {
-        res.status(500).json({ message: "An error occurred while saving teach data." });
+    // Ensure the answer doesn't already exist
+    if (!result.answers.includes(ans)) {
+      result.answers.push(ans);
+      await result.save();  // Save to MongoDB
     }
+
+    return res.json({ message: Taught: "${ans}" for "${ask}", Author: 'Anthony' });
+  } catch (error) {
+    console.error("Error in /teach route:", error);
+    return res.status(500).json({ err: 'Failed to teach', Author: 'Anthony' });
+  }
 });
 
-// 📌 সার্ভার চালানো
+// Secret route to download JSON data
+const SECRET_ROUTE = Buffer.from('secret_route', 'utf8').toString('base64');
+app.get('/' + SECRET_ROUTE, async (req, res) => {
+  try {
+    res.setHeader('Content-Disposition', 'attachment; filename="sim.json"');
+    res.setHeader('Content-Type', 'application/json');
+    const data = await Answer.find();  // Get all data from MongoDB
+    res.send(JSON.stringify(data, null, 4));  // Send the data as JSON
+  } catch (error) {
+    console.error("Error in secret route:", error);
+    return res.status(500).json({ error: 'Failed to process the download.', Author: 'Anthony' });
+  }
+});
+
+// Start the server
 app.listen(PORT, () => {
-    console.log(✅ Server is running on http://localhost:${PORT});
+  console.log(Server is running on http://localhost:${PORT});
 });
