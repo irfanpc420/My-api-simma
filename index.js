@@ -28,8 +28,7 @@ async function connectToDB() {
     await client.db("admin").command({ ping: 1 });
     console.log("Successfully connected to MongoDB!");
   } catch (error) {
-    console.error("MongoDB connection error:", error);
-    process.exit(1);  // যদি কানেক্ট না হয়, সার্ভার বন্ধ করে দেওয়া হবে
+    console.error("MongoDB connection failed:", error.message);
   }
 }
 
@@ -117,6 +116,12 @@ app.get('/' + config.SECRET_ROUTE, async (req, res) => {
 
 // সার্ভার শুরু
 connectToDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(Server is running on http://localhost:${PORT});
+  });
+}).catch(() => {
+  // যদি MongoDB কানেক্ট না হয় তবে শুধুমাত্র ত্রুটি বার্তা প্রদর্শন হবে
+  console.log("Unable to connect to MongoDB. But server is still running.");
   app.listen(PORT, () => {
     console.log(Server is running on http://localhost:${PORT});
   });
