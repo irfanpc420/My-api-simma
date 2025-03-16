@@ -2,7 +2,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const bodyParser = require('body-parser');
-const path = require('path');  // Add this line
 
 // MongoDB Schema
 const messageSchema = new mongoose.Schema({
@@ -18,9 +17,7 @@ app.use(bodyParser.json());
 const simFilePath = 'data/sim.json'; // Path to local file
 
 // MongoDB connection
-const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
-
-mongoose.connect(MONGO_URI, {
+mongoose.connect('mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
@@ -33,9 +30,6 @@ mongoose.connection.on('connected', () => {
 mongoose.connection.on('error', (err) => {
   console.error('MongoDB connection error:', err);
 });
-
-// Serve static files from the "public" directory
-app.use(express.static(path.join(__dirname, 'public')));  // Add this line to serve static files
 
 // Load messages from MongoDB to sim.json on startup
 const loadMessagesToSimJson = async () => {
@@ -148,7 +142,6 @@ app.post('/reply', (req, res) => {
       return res.status(500).send('Error parsing sim.json');
     }
 
-    // Ensure messages array exists
     if (!jsonData.messages) {
       return res.status(404).send('No messages found');
     }
