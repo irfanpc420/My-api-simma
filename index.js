@@ -6,13 +6,16 @@ const axios = require('axios');  // axios ইনস্টল করতে হব
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// MongoDB URI (এখানে সরাসরি সেট করা হয়েছে)
+// MongoDB URI (এখানে সরাসরি MongoDB URI দেওয়া হয়েছে)
 const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
 
 // MongoDB কানেকশন সেটআপ
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log("✅ MongoDB Connected Successfully!"))
-    .catch(err => console.error("❌ MongoDB Connection Error:", err));
+    .catch(err => {
+        console.error("❌ MongoDB Connection Error:", err);
+        process.exit(1);  // MongoDB কানেকশন ত্রুটি হলে সার্ভার বন্ধ করে দিবে
+    });
 
 // মডেল ডিফাইন (Question & Answer)
 const TeachSchema = new mongoose.Schema({
