@@ -1,50 +1,40 @@
-// .env ফাইল লোড করতে dotenv প্যাকেজ ব্যবহার করুন
-require('dotenv').config();
-
-// প্রয়োজনীয় প্যাকেজগুলো ইমপোর্ট করা
+// প্রয়োজনীয় প্যাকেজ ইমপোর্ট করা
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient } = require('mongodb');
 
-// Mongo URI এবং Port কে .env ফাইল থেকে লোড করা
-const mongoUri = process.env.MONGO_URI;
-const PORT = process.env.PORT || 2040;
+// MongoDB URI এবং Port এর মান সরাসরি কোডে দেওয়া
+const mongoUri = 'mongodb+srv://irfan:ifana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan';
+const PORT = 2040;
 
 // MongoClient তৈরি করা
-const client = new MongoClient(mongoUri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
+const client = new MongoClient(mongoUri);
 
-// MongoDB কানেকশন ফাংশন
+// MongoDB কানেক্ট ফাংশন
 async function run() {
   try {
-    // MongoDB কানেক্ট করা
     await client.connect();
-    // পিং পাঠানো চেক করার জন্য
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    await client.db('admin').command({ ping: 1 });
+    console.log('Successfully connected to MongoDB!');
   } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
+    console.error('Error connecting to MongoDB:', error);
   }
 }
 
 run().catch(console.dir);
 
-// Express অ্যাপ্লিকেশন শুরু করা
+// Express অ্যাপ্লিকেশন তৈরি করা
 const app = express();
 
-// স্ট্যাটিক ফাইলের জন্য Public ফোল্ডার যুক্ত করা
+// স্ট্যাটিক ফাইল সার্ভ করার জন্য public ফোল্ডার যুক্ত করা
 app.use(express.static(path.join(__dirname, 'public')));
 
-// MongoDB এর ডাটাবেজ এবং কোলেকশন নির্বাচন করা
-const database = client.db("chatDB");
-const collection = database.collection("responses");
+// MongoDB ডাটাবেজ এবং কোলেকশন নির্বাচন
+const database = client.db('chatDB');
+const collection = database.collection('responses');
 
-// রুট তৈরি করা - প্রশ্নের উত্তর ফেরত দেয়
+// GET রুট: চ্যাট রেসপন্স প্রদান
 app.get('/chat', async (req, res) => {
   try {
     const ask = req.query.ask?.toLowerCase();
@@ -56,26 +46,26 @@ app.get('/chat', async (req, res) => {
         const randomIndex = Math.floor(Math.random() * data.responses.length);
         response = data.responses[randomIndex];
       } else {
-        response = "I don't know the answer to that.";
+        response = "Sorry, I don't have an answer to that question.";
       }
     } else {
       response = "Please ask a question!";
     }
 
-    return res.json({ respond: response, Author: 'IRFAN' });
+    return res.json({ response, Author: 'IRFAN' });
   } catch (error) {
     console.error("Error in /chat route:", error);
-    return res.status(500).json({ respond: 'Internal Server Error', Author: 'IRFAN' });
+    return res.status(500).json({ response: 'Internal Server Error', Author: 'IRFAN' });
   }
 });
 
-// টিচ রুট - নতুন প্রশ্ন ও উত্তর সেভ করার জন্য
+// GET রুট: নতুন প্রশ্ন ও উত্তর টিচ করা
 app.get('/teach', async (req, res) => {
   const ask = req.query.ask?.toLowerCase();
   const ans = req.query.ans;
-  
+
   if (!ask || !ans) {
-    return res.json({ err: 'Missing ask or ans query!', Author: 'IRFAN' });
+    return res.json({ error: 'Missing `ask` or `ans` query!', Author: 'IRFAN' });
   }
 
   try {
@@ -87,34 +77,34 @@ app.get('/teach', async (req, res) => {
           { ask },
           { $push: { responses: ans } }
         );
-        return res.json({ message: Taught: "${ans}" for "${ask}", Author: 'IRFAN' });
+        return res.json({ message: `Taught: "${ans}" for "${ask}"`, Author: 'IRFAN' });
       } else {
-        return res.json({ message: "${ans}" is already taught for "${ask}", Author: 'IRFAN' });
+        return res.json({ message: `"${ans}" is already taught for "${ask}"`, Author: 'IRFAN' });
       }
     } else {
       await collection.insertOne({ ask, responses: [ans] });
-      return res.json({ message: Taught: "${ans}" for "${ask}", Author: 'IRFAN' });
+      return res.json({ message: `Taught: "${ans}" for "${ask}"`, Author: 'IRFAN' });
     }
   } catch (error) {
     console.error("Error in /teach route:", error);
-    return res.status(500).json({ err: 'Failed to teach', Author: 'IRFAN' });
+    return res.status(500).json({ error: 'Failed to teach', Author: 'IRFAN' });
   }
 });
 
-// Secret route to download JSON data
-const SECRET_ROUTE = Buffer.from('secret_route', 'utf8').toString('base64');
-app.get('/' + SECRET_ROUTE, async (req, res) => {
+// GET রুট: সিমুলেশন ডাটা ডাউনলোড করা
+app.get('/download-sim', async (req, res) => {
   try {
+    const simData = fs.readFileSync(path.join(__dirname, 'data', 'sim.json'), 'utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="sim.json"');
     res.setHeader('Content-Type', 'application/json');
-    res.sendFile(path.join(__dirname, 'data', 'sim.json'));
+    res.send(simData);
   } catch (error) {
-    console.error("Error in secret route:", error);
-    return res.status(500).json({ error: 'Failed to process the download.', Author: 'IRFAN' });
+    console.error('Error reading sim.json:', error);
+    return res.status(500).json({ error: 'Failed to download simulation data', Author: 'IRFAN' });
   }
 });
 
-// সাইট চলাতে হবে
+// ওয়েব সাইট চালু করা
 app.listen(PORT, () => {
-  console.log(Server is running on http://localhost:${PORT});
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
