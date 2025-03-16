@@ -10,12 +10,10 @@ const app = express();
 // MongoDB URI
 const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
 
-// MongoDB setup with additional options
+// MongoDB setup with updated options
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
-  useCreateIndex: true,  // Ensure indexes are created
-  useFindAndModify: false // Avoid deprecation warnings
+  useUnifiedTopology: true
 })
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.log('MongoDB connection error:', err));
