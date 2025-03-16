@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const fs = require('fs');
 const config = require('./config.json'); // config.json ফাইলটি ইনপোর্ট করা
 
 // MongoDB URI (config.json থেকে লোড)
@@ -27,8 +28,10 @@ async function connectToDB() {
     await client.connect();
     await client.db("admin").command({ ping: 1 });
     console.log("Successfully connected to MongoDB!");
+    return true; // MongoDB কানেকশন সফল হলে true ফেরত দেওয়া হবে
   } catch (error) {
     console.error("MongoDB connection failed:", error.message);
+    return false; // MongoDB কানেকশন ব্যর্থ হলে false ফেরত দেওয়া হবে
   }
 }
 
@@ -114,14 +117,13 @@ app.get('/' + config.SECRET_ROUTE, async (req, res) => {
   }
 });
 
-// সার্ভার শুরু
-connectToDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(Server is running on http://localhost:${PORT});
-  });
-}).catch(() => {
-  // যদি MongoDB কানেক্ট না হয় তবে শুধুমাত্র ত্রুটি বার্তা প্রদর্শন হবে
-  console.log("Unable to connect to MongoDB. But server is still running.");
+// MongoDB কানেকশন চেক এবং সার্ভার শুরু
+connectToDB().then((connected) => {
+  if (!connected) {
+    console.log("MongoDB connection failed. Server is still running.");
+  }
+
+  // সার্ভার চালু হবে, MongoDB কানেকশন ব্যর্থ হলেও
   app.listen(PORT, () => {
     console.log(Server is running on http://localhost:${PORT});
   });
