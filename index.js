@@ -75,6 +75,7 @@ app.post('/teach', async (req, res) => {
 
     res.status(200).send('Message saved successfully!');
   } catch (err) {
+    console.log('Error saving message:', err);  // Log error
     res.status(500).send('Error saving message!');
   }
 });
