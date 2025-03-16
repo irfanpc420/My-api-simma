@@ -4,24 +4,110 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bot API Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #333;
+      color: white;
+      padding: 10px 0;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+    }
+
+    .container {
+      width: 80%;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h2 {
+      color: #444;
+    }
+
+    form {
+      background-color: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    input[type="text"] {
+      width: calc(100% - 22px);
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #response {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f1f1f1;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Bot API Test</h1>
-  
-  <h2>Teach the bot:</h2>
-  <form id="teachForm">
-    <input type="text" id="teachMessage" placeholder="Enter message" required><br>
-    <input type="text" id="teachReply" placeholder="Enter reply" required><br>
-    <button type="submit">Teach</button>
-  </form>
+  <header>
+    <h1>Bot API Test</h1>
+  </header>
 
-  <h2>Get reply from the bot:</h2>
-  <form id="replyForm">
-    <input type="text" id="replyMessage" placeholder="Enter message to get reply" required><br>
-    <button type="submit">Get Reply</button>
-  </form>
+  <div class="container">
+    <h2>Teach the bot:</h2>
+    <form id="teachForm">
+      <div class="form-group">
+        <input type="text" id="teachMessage" placeholder="Enter message" required>
+      </div>
+      <div class="form-group">
+        <input type="text" id="teachReply" placeholder="Enter reply" required>
+      </div>
+      <button type="submit">Teach</button>
+    </form>
 
-  <div id="response"></div>
+    <h2>Get reply from the bot:</h2>
+    <form id="replyForm">
+      <div class="form-group">
+        <input type="text" id="replyMessage" placeholder="Enter message to get reply" required>
+      </div>
+      <button type="submit">Get Reply</button>
+    </form>
+
+    <div id="response"></div>
+  </div>
 
   <script>
     document.getElementById('teachForm').addEventListener('submit', function(e) {
@@ -38,7 +124,10 @@
       .then(data => {
         document.getElementById('response').textContent = data;
       })
-      .catch(error => console.error('Error:', error));
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('response').textContent = 'Error: Could not teach the bot.';
+      });
     });
 
     document.getElementById('replyForm').addEventListener('submit', function(e) {
@@ -52,9 +141,16 @@
       })
       .then(response => response.json())
       .then(data => {
-        document.getElementById('response').textContent = data.reply;
+        if (data.reply) {
+          document.getElementById('response').textContent = `Bot Reply: ${data.reply}`;
+        } else {
+          document.getElementById('response').textContent = 'No reply found for this message.';
+        }
       })
-      .catch(error => console.error('Error:', error));
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('response').textContent = 'Error: Could not get reply.';
+      });
     });
   </script>
 </body>
