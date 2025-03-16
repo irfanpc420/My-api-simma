@@ -1,81 +1,97 @@
+// .env ফাইল লোড করতে dotenv প্যাকেজ ব্যবহার করুন
+require('dotenv').config();
+
+// প্রয়োজনীয় প্যাকেজগুলো ইমপোর্ট করা
 const express = require('express');
-const { MongoClient } = require('mongodb');
-const dotenv = require('dotenv');
 const path = require('path');
-const fs = require('fs');
+const { MongoClient, ServerApiVersion } = require('mongodb');
 
-dotenv.config();
-
-const app = express();
+// Mongo URI এবং Port কে .env ফাইল থেকে লোড করা
+const mongoUri = process.env.MONGO_URI;
 const PORT = process.env.PORT || 2040;
 
-// MongoDB URI থেকে কানেকশন তৈরি
-const client = new MongoClient(process.env.MONGO_URI);
-
-// ডাটাবেসে কানেকশন চেক করার ফাংশন
-const connectToDb = async () => {
-  try {
-    await client.connect();
-    console.log("Connected to MongoDB!");
-  } catch (error) {
-    console.error("Failed to connect to MongoDB", error);
+// MongoClient তৈরি করা
+const client = new MongoClient(mongoUri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
   }
-};
+});
 
-// Express মিডলওয়্যার
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
-
-// MongoDB ডাটাবেসের কলেকশন
-const database = client.db('chatDB');
-const collection = database.collection('responses');
-
-// /chat রাউট: প্রশ্নের উত্তর দিতে
-app.get('/chat', async (req, res) => {
-  const ask = req.query.ask?.toLowerCase();
-
+// MongoDB কানেকশন ফাংশন
+async function run() {
   try {
+    // MongoDB কানেক্ট করা
+    await client.connect();
+    // পিং পাঠানো চেক করার জন্য
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+  }
+}
+
+run().catch(console.dir);
+
+// Express অ্যাপ্লিকেশন শুরু করা
+const app = express();
+
+// স্ট্যাটিক ফাইলের জন্য Public ফোল্ডার যুক্ত করা
+app.use(express.static(path.join(__dirname, 'public')));
+
+// MongoDB এর ডাটাবেজ এবং কোলেকশন নির্বাচন করা
+const database = client.db("chatDB");
+const collection = database.collection("responses");
+
+// রুট তৈরি করা - প্রশ্নের উত্তর ফেরত দেয়
+app.get('/chat', async (req, res) => {
+  try {
+    const ask = req.query.ask?.toLowerCase();
+    let response;
+
     if (ask) {
-      // MongoDB থেকে উত্তর খুঁজে নেওয়া
       const data = await collection.findOne({ ask });
       if (data && data.responses.length > 0) {
-        // রেসপন্সের মধ্যে থেকে একটি র্যান্ডম উত্তর দেখানো
         const randomIndex = Math.floor(Math.random() * data.responses.length);
-        return res.json({ respond: data.responses[randomIndex], Author: 'IRFAN' });
+        response = data.responses[randomIndex];
       } else {
-        return res.json({ respond: "I don't know the answer to that.", Author: 'IRFAN' });
+        response = "I don't know the answer to that.";
       }
+    } else {
+      response = "Please ask a question!";
     }
-    return res.json({ respond: "Please ask a question.", Author: 'IRFAN' });
+
+    return res.json({ respond: response, Author: 'IRFAN' });
   } catch (error) {
     console.error("Error in /chat route:", error);
     return res.status(500).json({ respond: 'Internal Server Error', Author: 'IRFAN' });
   }
 });
 
-// /teach রাউট: নতুন ডাটা টিচ করা
+// টিচ রুট - নতুন প্রশ্ন ও উত্তর সেভ করার জন্য
 app.get('/teach', async (req, res) => {
   const ask = req.query.ask?.toLowerCase();
   const ans = req.query.ans;
-
+  
   if (!ask || !ans) {
     return res.json({ err: 'Missing ask or ans query!', Author: 'IRFAN' });
   }
 
   try {
-    // MongoDB-তে প্রশ্নের জন্য উত্তর সংরক্ষণ করা
     const existingData = await collection.findOne({ ask });
 
     if (existingData) {
-      // যদি উত্তর ইতিমধ্যেই থাকলে, নতুন ডাটা যোগ করা
       if (!existingData.responses.includes(ans)) {
-        await collection.updateOne({ ask }, { $push: { responses: ans } });
+        await collection.updateOne(
+          { ask },
+          { $push: { responses: ans } }
+        );
         return res.json({ message: Taught: "${ans}" for "${ask}", Author: 'IRFAN' });
       } else {
         return res.json({ message: "${ans}" is already taught for "${ask}", Author: 'IRFAN' });
       }
     } else {
-      // যদি প্রশ্ন না থাকে তবে নতুন প্রশ্ন এবং উত্তর যুক্ত করা
       await collection.insertOne({ ask, responses: [ans] });
       return res.json({ message: Taught: "${ans}" for "${ask}", Author: 'IRFAN' });
     }
@@ -85,31 +101,20 @@ app.get('/teach', async (req, res) => {
   }
 });
 
-// ডাটা ফাইল সেভ করা /saveData রাউট
-app.get('/saveData', async (req, res) => {
-  const data = req.query.data;
-
-  if (!data) {
-    return res.json({ err: 'No data to save!', Author: 'IRFAN' });
-  }
-
+// Secret route to download JSON data
+const SECRET_ROUTE = Buffer.from('secret_route', 'utf8').toString('base64');
+app.get('/' + SECRET_ROUTE, async (req, res) => {
   try {
-    const dataFilePath = path.join(__dirname, 'data', 'sim.json');
-    const fileData = fs.existsSync(dataFilePath) ? JSON.parse(fs.readFileSync(dataFilePath, 'utf-8')) : {};
-    fileData.savedData = data;
-
-    // ডাটা ফাইল আপডেট করা
-    fs.writeFileSync(dataFilePath, JSON.stringify(fileData, null, 2));
-    return res.json({ message: 'Data saved successfully!', Author: 'IRFAN' });
+    res.setHeader('Content-Disposition', 'attachment; filename="sim.json"');
+    res.setHeader('Content-Type', 'application/json');
+    res.sendFile(path.join(__dirname, 'data', 'sim.json'));
   } catch (error) {
-    console.error("Error in /saveData route:", error);
-    return res.status(500).json({ err: 'Failed to save data', Author: 'IRFAN' });
+    console.error("Error in secret route:", error);
+    return res.status(500).json({ error: 'Failed to process the download.', Author: 'IRFAN' });
   }
 });
 
-// MongoDB কানেক্ট হওয়া পর সার্ভার শুরু করা
-connectToDb().then(() => {
-  app.listen(PORT, () => {
-    console.log(Server is running on http://localhost:${PORT});
-  });
+// সাইট চলাতে হবে
+app.listen(PORT, () => {
+  console.log(Server is running on http://localhost:${PORT});
 });
