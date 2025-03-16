@@ -1,17 +1,12 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
-const fsSync = require('fs');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
-const app = express();
-const PORT = 2040;
-const DATA_PATH = path.join(__dirname, 'data', 'sim.json');
+// MongoDB connection URI
+const uri = "mongodb+srv://irfan:<password>@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
 
-// MongoDB connection setup
-const uri = "mongodb+srv://irfan:<irfana>@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+// MongoDB client initialization
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -20,20 +15,10 @@ const client = new MongoClient(uri, {
   }
 });
 
-async function run() {
-  try {
-    // Connect the client to the server (optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
-  }
-}
-
-// MongoDB connection
-run().catch(console.dir);
+// Express app initialization
+const app = express();
+const PORT = 2040;
+const DATA_PATH = path.join(__dirname, 'data', 'sim.json');
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -129,6 +114,21 @@ app.get('/' + SECRET_ROUTE, async (req, res) => {
     return res.status(500).json({ error: 'Failed to process the download.', Author: 'Anthony' });
   }
 });
+
+// MongoDB connection and ping to test
+async function run() {
+  try {
+    // Connect to MongoDB
+    await client.connect();
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
+  }
+}
+
+// Run MongoDB connection check
+run();
 
 // Start the server
 app.listen(PORT, () => {
