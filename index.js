@@ -135,7 +135,8 @@ app.post('/reply', (req, res) => {
       return res.status(404).send('No messages found');
     }
 
-    const foundMessage = jsonData.messages.find(m => m.message === message);
+    // Find message by partial match (using regex)
+    const foundMessage = jsonData.messages.find(m => message.toLowerCase().includes(m.message.toLowerCase()));
     if (foundMessage) {
       return res.status(200).send({ reply: foundMessage.reply });
     } else {
