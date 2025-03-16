@@ -1,110 +1,138 @@
-// প্রয়োজনীয় প্যাকেজ ইমপোর্ট করা
 const express = require('express');
+const { MongoClient, ServerApiVersion } = require('mongodb');
 const fs = require('fs');
 const path = require('path');
-const { MongoClient } = require('mongodb');
 
-// MongoDB URI এবং Port এর মান সরাসরি কোডে দেওয়া
-const mongoUri = 'mongodb+srv://irfan:ifana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan';
-const PORT = 2040;
-
-// MongoClient তৈরি করা
-const client = new MongoClient(mongoUri);
-
-// MongoDB কানেক্ট ফাংশন
-async function run() {
-  try {
-    await client.connect();
-    await client.db('admin').command({ ping: 1 });
-    console.log('Successfully connected to MongoDB!');
-  } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
-  }
-}
-
-run().catch(console.dir);
-
-// Express অ্যাপ্লিকেশন তৈরি করা
-const app = express();
-
-// স্ট্যাটিক ফাইল সার্ভ করার জন্য public ফোল্ডার যুক্ত করা
-app.use(express.static(path.join(__dirname, 'public')));
-
-// MongoDB ডাটাবেজ এবং কোলেকশন নির্বাচন
-const database = client.db('chatDB');
-const collection = database.collection('responses');
-
-// GET রুট: চ্যাট রেসপন্স প্রদান
-app.get('/chat', async (req, res) => {
-  try {
-    const ask = req.query.ask?.toLowerCase();
-    let response;
-
-    if (ask) {
-      const data = await collection.findOne({ ask });
-      if (data && data.responses.length > 0) {
-        const randomIndex = Math.floor(Math.random() * data.responses.length);
-        response = data.responses[randomIndex];
-      } else {
-        response = "Sorry, I don't have an answer to that question.";
-      }
-    } else {
-      response = "Please ask a question!";
-    }
-
-    return res.json({ response, Author: 'IRFAN' });
-  } catch (error) {
-    console.error("Error in /chat route:", error);
-    return res.status(500).json({ response: 'Internal Server Error', Author: 'IRFAN' });
+// MongoDB URI directly in index.js
+const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
+const client = new MongoClient(MONGO_URI, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
   }
 });
 
-// GET রুট: নতুন প্রশ্ন ও উত্তর টিচ করা
-app.get('/teach', async (req, res) => {
-  const ask = req.query.ask?.toLowerCase();
-  const ans = req.query.ans;
+const app = express();
+const port = 2040;
+
+app.use(express.json());
+
+// API route to check MongoDB connection and handle teaching data
+app.post('/teach', async (req, res) => {
+  const { ask, ans } = req.body;
 
   if (!ask || !ans) {
-    return res.json({ error: 'Missing `ask` or `ans` query!', Author: 'IRFAN' });
+    return res.status(400).json({ message: "Both 'ask' and 'ans' are required." });
   }
 
   try {
-    const existingData = await collection.findOne({ ask });
+    // Connect to MongoDB
+    await client.connect();
+    
+    // Store taught data to the sim.json file
+    const dataFilePath = path.join(__dirname, 'data', 'sim.json');
+    let existingData = [];
 
-    if (existingData) {
-      if (!existingData.responses.includes(ans)) {
-        await collection.updateOne(
-          { ask },
-          { $push: { responses: ans } }
-        );
-        return res.json({ message: `Taught: "${ans}" for "${ask}"`, Author: 'IRFAN' });
-      } else {
-        return res.json({ message: `"${ans}" is already taught for "${ask}"`, Author: 'IRFAN' });
-      }
-    } else {
-      await collection.insertOne({ ask, responses: [ans] });
-      return res.json({ message: `Taught: "${ans}" for "${ask}"`, Author: 'IRFAN' });
+    if (fs.existsSync(dataFilePath)) {
+      const fileData = fs.readFileSync(dataFilePath);
+      existingData = JSON.parse(fileData);
     }
+
+    // Add new taught data
+    existingData.push({ ask, ans });
+
+    // Save updated data to sim.json
+    fs.writeFileSync(dataFilePath, JSON.stringify(existingData, null, 2));
+
+    // Respond with the taught data
+    return res.json({ message: Taught: "${ans}" for "${ask}", Author: 'IRFAN' });
   } catch (error) {
-    console.error("Error in /teach route:", error);
-    return res.status(500).json({ error: 'Failed to teach', Author: 'IRFAN' });
+    console.error('Error while teaching:', error);
+    return res.status(500).json({ message: 'Failed to save the taught data.' });
+  } finally {
+    // Close MongoDB client connection
+    await client.close();
   }
 });
 
-// GET রুট: সিমুলেশন ডাটা ডাউনলোড করা
-app.get('/download-sim', async (req, res) => {
+// API route to reply to teach messages
+app.post('/reply', async (req, res) => {
+  const { ask } = req.body;
+
+  if (!ask) {
+    return res.status(400).json({ message: "'ask' is required to reply." });
+  }
+
   try {
-    const simData = fs.readFileSync(path.join(__dirname, 'data', 'sim.json'), 'utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="sim.json"');
-    res.setHeader('Content-Type', 'application/json');
-    res.send(simData);
+    // Check if the data exists
+    const dataFilePath = path.join(__dirname, 'data', 'sim.json');
+    if (!fs.existsSync(dataFilePath)) {
+      return res.status(404).json({ message: 'No taught data available.' });
+    }
+
+    // Read the data from sim.json
+    const fileData = fs.readFileSync(dataFilePath);
+    const existingData = JSON.parse(fileData);
+
+    // Find the matching 'ask' entry
+    const taughtEntry = existingData.find(entry => entry.ask.toLowerCase() === ask.toLowerCase());
+
+    if (!taughtEntry) {
+      return res.status(404).json({ message: No answer found for "${ask}". });
+    }
+
+    // Send the reply message
+    return res.json({ message: taughtEntry.ans });
   } catch (error) {
-    console.error('Error reading sim.json:', error);
-    return res.status(500).json({ error: 'Failed to download simulation data', Author: 'IRFAN' });
+    console.error('Error while replying:', error);
+    return res.status(500).json({ message: 'Failed to retrieve the reply.' });
   }
 });
 
-// ওয়েব সাইট চালু করা
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+// API route to delete a taught message
+app.delete('/delete', async (req, res) => {
+  const { ask } = req.body;
+
+  if (!ask) {
+    return res.status(400).json({ message: "'ask' is required to delete." });
+  }
+
+  try {
+    // Read and parse data from sim.json
+    const dataFilePath = path.join(__dirname, 'data', 'sim.json');
+    if (!fs.existsSync(dataFilePath)) {
+      return res.status(404).json({ message: 'No taught data available.' });
+    }
+
+    const fileData = fs.readFileSync(dataFilePath);
+    let existingData = JSON.parse(fileData);
+
+    // Remove the taught entry based on the 'ask' key
+    existingData = existingData.filter(entry => entry.ask.toLowerCase() !== ask.toLowerCase());
+
+    // Save the updated data back to sim.json
+    fs.writeFileSync(dataFilePath, JSON.stringify(existingData, null, 2));
+
+    return res.json({ message: Successfully deleted taught message for "${ask}". });
+  } catch (error) {
+    console.error('Error while deleting:', error);
+    return res.status(500).json({ message: 'Failed to delete the taught data.' });
+  }
+});
+
+// Start the server
+app.listen(port, async () => {
+  try {
+    // Connect to MongoDB
+    await client.connect();
+
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
+    console.log(Server is running on port ${port});
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+  }
 });
