@@ -1,138 +1,91 @@
 const express = require('express');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const mongoose = require('mongoose');
 const fs = require('fs');
-const path = require('path');
+const bodyParser = require('body-parser');
 
-// MongoDB URI directly in index.js
+// MongoDB URI
 const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
-const client = new MongoClient(MONGO_URI, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
+
+// MongoDB setup
+mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.log('MongoDB connection error:', err));
 
 const app = express();
-const port = 2040;
 
-app.use(express.json());
+// Middleware to parse JSON
+app.use(bodyParser.json());
 
-// API route to check MongoDB connection and handle teaching data
+// MongoDB Message Model
+const messageSchema = new mongoose.Schema({
+  message: String,
+  reply: String
+});
+
+const Message = mongoose.model('Message', messageSchema);
+
+// POST /teach: Save message and reply to MongoDB and sim.json
 app.post('/teach', async (req, res) => {
-  const { ask, ans } = req.body;
-
-  if (!ask || !ans) {
-    return res.status(400).json({ message: "Both 'ask' and 'ans' are required." });
-  }
+  const { message, reply } = req.body;
 
   try {
-    // Connect to MongoDB
-    await client.connect();
-    
-    // Store taught data to the sim.json file
-    const dataFilePath = path.join(__dirname, 'data', 'sim.json');
-    let existingData = [];
+    // Save to MongoDB
+    const newMessage = new Message({ message, reply });
+    await newMessage.save();
 
-    if (fs.existsSync(dataFilePath)) {
-      const fileData = fs.readFileSync(dataFilePath);
-      existingData = JSON.parse(fileData);
-    }
+    // Save to sim.json
+    fs.readFile('data/sim.json', 'utf8', (err, data) => {
+      if (err) {
+        return res.status(500).send('Error reading sim.json');
+      }
 
-    // Add new taught data
-    existingData.push({ ask, ans });
+      const jsonData = JSON.parse(data);
+      jsonData.messages.push({ message, reply });
 
-    // Save updated data to sim.json
-    fs.writeFileSync(dataFilePath, JSON.stringify(existingData, null, 2));
-
-    // Respond with the taught data
-    return res.json({ message: Taught: "${ans}" for "${ask}", Author: 'IRFAN' });
-  } catch (error) {
-    console.error('Error while teaching:', error);
-    return res.status(500).json({ message: 'Failed to save the taught data.' });
-  } finally {
-    // Close MongoDB client connection
-    await client.close();
+      fs.writeFile('data/sim.json', JSON.stringify(jsonData, null, 2), (err) => {
+        if (err) {
+          return res.status(500).send('Error saving to sim.json');
+        }
+        res.status(200).send('Message saved successfully!');
+      });
+    });
+  } catch (err) {
+    res.status(500).send('Error saving message!');
   }
 });
 
-// API route to reply to teach messages
-app.post('/reply', async (req, res) => {
-  const { ask } = req.body;
-
-  if (!ask) {
-    return res.status(400).json({ message: "'ask' is required to reply." });
-  }
+// GET /reply: Fetch reply based on the message from MongoDB or sim.json
+app.get('/reply', async (req, res) => {
+  const { message } = req.query;
 
   try {
-    // Check if the data exists
-    const dataFilePath = path.join(__dirname, 'data', 'sim.json');
-    if (!fs.existsSync(dataFilePath)) {
-      return res.status(404).json({ message: 'No taught data available.' });
+    // Check in MongoDB
+    const replyData = await Message.findOne({ message });
+    if (replyData) {
+      return res.json({ reply: replyData.reply });
     }
 
-    // Read the data from sim.json
-    const fileData = fs.readFileSync(dataFilePath);
-    const existingData = JSON.parse(fileData);
+    // If not found in MongoDB, check sim.json
+    fs.readFile('data/sim.json', 'utf8', (err, data) => {
+      if (err) {
+        return res.status(500).send('Error reading sim.json');
+      }
 
-    // Find the matching 'ask' entry
-    const taughtEntry = existingData.find(entry => entry.ask.toLowerCase() === ask.toLowerCase());
-
-    if (!taughtEntry) {
-      return res.status(404).json({ message: No answer found for "${ask}". });
-    }
-
-    // Send the reply message
-    return res.json({ message: taughtEntry.ans });
-  } catch (error) {
-    console.error('Error while replying:', error);
-    return res.status(500).json({ message: 'Failed to retrieve the reply.' });
+      const jsonData = JSON.parse(data);
+      const messageData = jsonData.messages.find(m => m.message === message);
+      if (messageData) {
+        return res.json({ reply: messageData.reply });
+      } else {
+        return res.status(404).send('No reply found!');
+      }
+    });
+  } catch (err) {
+    res.status(500).send('Error fetching reply!');
   }
 });
 
-// API route to delete a taught message
-app.delete('/delete', async (req, res) => {
-  const { ask } = req.body;
-
-  if (!ask) {
-    return res.status(400).json({ message: "'ask' is required to delete." });
-  }
-
-  try {
-    // Read and parse data from sim.json
-    const dataFilePath = path.join(__dirname, 'data', 'sim.json');
-    if (!fs.existsSync(dataFilePath)) {
-      return res.status(404).json({ message: 'No taught data available.' });
-    }
-
-    const fileData = fs.readFileSync(dataFilePath);
-    let existingData = JSON.parse(fileData);
-
-    // Remove the taught entry based on the 'ask' key
-    existingData = existingData.filter(entry => entry.ask.toLowerCase() !== ask.toLowerCase());
-
-    // Save the updated data back to sim.json
-    fs.writeFileSync(dataFilePath, JSON.stringify(existingData, null, 2));
-
-    return res.json({ message: Successfully deleted taught message for "${ask}". });
-  } catch (error) {
-    console.error('Error while deleting:', error);
-    return res.status(500).json({ message: 'Failed to delete the taught data.' });
-  }
-});
-
-// Start the server
-app.listen(port, async () => {
-  try {
-    // Connect to MongoDB
-    await client.connect();
-
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-
-    console.log(Server is running on port ${port});
-  } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
-  }
+// Server setup
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(Server is running on port ${port});
 });
