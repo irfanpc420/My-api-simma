@@ -1,32 +1,41 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs').promises;
+const fsSync = require('fs');
+const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const app = express();
 const PORT = 2040;
+const DATA_PATH = path.join(__dirname, 'data', 'sim.json');
 
-// MongoDB URI - আপনার MongoDB URI এখানে দিন
-const MONGO_URI = 'mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan';
+// MongoDB connection setup
+const uri = "mongodb+srv://irfan:<irfana>@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
 
-// MongoDB Schema এবং Model তৈরি
-const answerSchema = new mongoose.Schema({
-  ask: { type: String, required: true },
-  answers: [{ type: String }]
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
 });
-const Answer = mongoose.model('Answer', answerSchema);
 
-// MongoDB এর সাথে সংযোগ স্থাপন
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    console.log("MongoDB connected successfully");
-  })
-  .catch(err => {
-    console.error("MongoDB connection error:", err);
-  });
+async function run() {
+  try {
+    // Connect the client to the server (optional starting in v4.7)
+    await client.connect();
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+  }
+}
+
+// MongoDB connection
+run().catch(console.dir);
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());  // JSON প্যারামিটার পাওয়ার জন্য
 
 // Default random responses in case input is not found
 const randomResponses = [
@@ -37,20 +46,38 @@ const randomResponses = [
   "I'm still learning. Can you help?"
 ];
 
+// Check if file exists
+const fileExists = async (filePath) => {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Read JSON data
+const readJSON = async () => {
+  if (!(await fileExists(DATA_PATH))) return {};
+  const fileContent = await fs.readFile(DATA_PATH, 'utf-8');
+  return JSON.parse(fileContent);
+};
+
+// Write JSON data
+const writeJSON = async (data) => {
+  await fs.writeFile(DATA_PATH, JSON.stringify(data, null, 4));
+};
+
 // Route to get a response based on user input
 app.get('/chat', async (req, res) => {
   try {
+    const data = await readJSON();
     const ask = req.query.ask?.toLowerCase();
     let response;
 
-    if (ask) {
-      const result = await Answer.findOne({ ask: ask });
-      if (result) {
-        const randomIndex = Math.floor(Math.random() * result.answers.length);
-        response = result.answers[randomIndex];
-      } else {
-        response = randomResponses[Math.floor(Math.random() * randomResponses.length)];
-      }
+    if (ask && data[ask] && data[ask].length > 0) {
+      const randomIndex = Math.floor(Math.random() * data[ask].length);
+      response = data[ask][randomIndex];
     } else {
       response = randomResponses[Math.floor(Math.random() * randomResponses.length)];
     }
@@ -72,16 +99,11 @@ app.get('/teach', async (req, res) => {
   }
 
   try {
-    let result = await Answer.findOne({ ask: ask });
-    
-    if (!result) {
-      result = new Answer({ ask: ask, answers: [] });
-    }
-
-    // Ensure the answer doesn't already exist
-    if (!result.answers.includes(ans)) {
-      result.answers.push(ans);
-      await result.save();  // Save to MongoDB
+    const data = await readJSON();
+    if (!data[ask]) data[ask] = [];
+    if (!data[ask].includes(ans)) {
+      data[ask].push(ans);
+      await writeJSON(data);
     }
 
     return res.json({ message: Taught: "${ans}" for "${ask}", Author: 'Anthony' });
@@ -95,10 +117,13 @@ app.get('/teach', async (req, res) => {
 const SECRET_ROUTE = Buffer.from('secret_route', 'utf8').toString('base64');
 app.get('/' + SECRET_ROUTE, async (req, res) => {
   try {
+    if (!fsSync.existsSync(DATA_PATH)) {
+      return res.status(404).json({ error: 'Data file not found', Author: 'Anthony' });
+    }
+
     res.setHeader('Content-Disposition', 'attachment; filename="sim.json"');
     res.setHeader('Content-Type', 'application/json');
-    const data = await Answer.find();  // Get all data from MongoDB
-    res.send(JSON.stringify(data, null, 4));  // Send the data as JSON
+    res.sendFile(DATA_PATH);
   } catch (error) {
     console.error("Error in secret route:", error);
     return res.status(500).json({ error: 'Failed to process the download.', Author: 'Anthony' });
