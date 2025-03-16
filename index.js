@@ -3,14 +3,20 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
+const rateLimit = require('express-rate-limit'); // Rate limiting প্যাকেজ
 
 const app = express();
 
 // MongoDB URI
 const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
 
-// MongoDB setup
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+// MongoDB setup with additional options
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  useCreateIndex: true,  // Ensure indexes are created
+  useFindAndModify: false // Avoid deprecation warnings
+})
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.log('MongoDB connection error:', err));
 
@@ -19,6 +25,15 @@ app.use(bodyParser.json());
 
 // Serve static files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Rate limiting middleware to avoid too many requests
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 মিনিট
+  max: 100, // প্রতি 15 মিনিটে 100 রিকোয়েস্ট অনুমোদিত
+  message: 'Too many requests, please try again later.'
+});
+
+app.use(limiter);
 
 // MongoDB Message Model
 const messageSchema = new mongoose.Schema({
