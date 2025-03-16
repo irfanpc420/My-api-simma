@@ -9,7 +9,7 @@ const app = express();
 // MongoDB URI
 const MONGO_URI = "mongodb+srv://irfan:irfana@irfan.e3l2q.mongodb.net/?retryWrites=true&w=majority&appName=Irfan";
 
-// MongoDB setup with options
+// MongoDB setup with additional options
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -31,33 +31,46 @@ const messageSchema = new mongoose.Schema({
 
 const Message = mongoose.model('Message', messageSchema);
 
-// Load existing messages from MongoDB to sim.json
+// Load previous messages from MongoDB to sim.json at server start
+const simFilePath = path.join(__dirname, 'data', 'sim.json');
 const loadMessagesToSimJson = async () => {
   try {
-    const messages = await Message.find({});
-    const simFilePath = path.join(__dirname, 'data/sim.json');
-    const simData = {
-      messages: messages.map(msg => ({ message: msg.message, reply: msg.reply }))
-    };
-    fs.writeFileSync(simFilePath, JSON.stringify(simData, null, 2));
-    console.log('Messages loaded into sim.json');
+    // Fetch all messages from MongoDB
+    const messages = await Message.find();
+    
+    // Read the existing sim.json file
+    fs.readFile(simFilePath, 'utf8', (err, data) => {
+      if (err) {
+        console.error('Error reading sim.json:', err);
+        return;
+      }
+
+      let jsonData = JSON.parse(data);
+      
+      // Add MongoDB messages to sim.json if they are not already present
+      messages.forEach((messageData) => {
+        const existingMessage = jsonData.messages.find(m => m.message === messageData.message);
+        if (!existingMessage) {
+          jsonData.messages.push({ message: messageData.message, reply: messageData.reply });
+        }
+      });
+
+      // Write back to sim.json
+      fs.writeFile(simFilePath, JSON.stringify(jsonData, null, 2), (err) => {
+        if (err) {
+          console.error('Error saving to sim.json:', err);
+        } else {
+          console.log('MongoDB messages loaded into sim.json');
+        }
+      });
+    });
   } catch (err) {
-    console.log('Error loading messages from MongoDB to sim.json:', err);
+    console.error('Error loading messages from MongoDB:', err);
   }
 };
 
-// Load existing data from sim.json at startup
-const loadSimJson = () => {
-  const simFilePath = path.join(__dirname, 'data/sim.json');
-  if (fs.existsSync(simFilePath)) {
-    const data = fs.readFileSync(simFilePath, 'utf8');
-    return JSON.parse(data);
-  } else {
-    return { messages: [] };
-  }
-};
-
-let simData = loadSimJson(); // Initialize simData from sim.json
+// Call the function to load messages into sim.json at server startup
+loadMessagesToSimJson();
 
 // POST /teach: Save message and reply to MongoDB and sim.json
 app.post('/teach', async (req, res) => {
@@ -69,27 +82,42 @@ app.post('/teach', async (req, res) => {
     await newMessage.save();
 
     // Save to sim.json
-    const simFilePath = path.join(__dirname, 'data/sim.json');
-    simData.messages.push({ message, reply });
-    fs.writeFileSync(simFilePath, JSON.stringify(simData, null, 2));
+    fs.readFile(simFilePath, 'utf8', (err, data) => {
+      if (err) return res.status(500).send('Error reading sim.json');
 
-    res.status(200).send('Message saved successfully!');
+      let jsonData = JSON.parse(data);
+      jsonData.messages.push({ message, reply });
+
+      fs.writeFile(simFilePath, JSON.stringify(jsonData, null, 2), (err) => {
+        if (err) return res.status(500).send('Error saving to sim.json');
+        res.status(200).send('Message saved successfully!');
+      });
+    });
   } catch (err) {
-    console.log('Error saving message:', err);  // Log error
     res.status(500).send('Error saving message!');
   }
 });
 
 // GET /reply: Fetch reply based on the message from sim.json
-app.get('/reply', (req, res) => {
+app.get('/reply', async (req, res) => {
   const { message } = req.query;
 
-  // Check in sim.json
-  const messageData = simData.messages.find(m => m.message === message);
-  if (messageData) {
-    return res.json({ reply: messageData.reply });
-  } else {
-    return res.status(404).send('No reply found!');
+  try {
+    // Check sim.json for the reply
+    fs.readFile(simFilePath, 'utf8', (err, data) => {
+      if (err) return res.status(500).send('Error reading sim.json');
+
+      let jsonData = JSON.parse(data);
+      const messageData = jsonData.messages.find(m => m.message === message);
+
+      if (messageData) {
+        return res.json({ reply: messageData.reply });
+      } else {
+        return res.status(404).send('No reply found!');
+      }
+    });
+  } catch (err) {
+    res.status(500).send('Error fetching reply!');
   }
 });
 
@@ -102,6 +130,4 @@ app.get('/', (req, res) => {
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
-  // Load messages from MongoDB into sim.json at startup
-  loadMessagesToSimJson();
 });
