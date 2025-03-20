@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bot API Test</title>
+  <title>Bot API Test (3D)</title>
   <style>
     /* General Styles */
     body {
@@ -14,6 +14,7 @@
       color: #333;
       transition: background-color 0.3s ease, color 0.3s ease;
       line-height: 1.6;
+      perspective: 1000px; /* 3D Perspective */
     }
 
     /* Dark Mode */
@@ -66,6 +67,7 @@
       max-width: 600px;
       margin: 0 auto;
       padding: 20px;
+      transform-style: preserve-3d; /* Enable 3D for children */
     }
 
     /* Form Styles */
@@ -76,14 +78,24 @@
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       border-radius: 8px;
       transition: all 0.3s ease;
+      transform: rotateX(0deg) rotateY(0deg); /* Initial 3D rotation */
     }
 
     form:hover {
+      transform: rotateX(10deg) rotateY(10deg); /* 3D hover effect */
       box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
     }
 
     .form-group {
       margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 1rem;
+      margin-bottom: 5px;
+      color: #333;
+      transition: color 0.3s ease;
     }
 
     input[type="text"] {
@@ -167,11 +179,12 @@
       animation: spin 1s linear infinite;
       display: none;
       margin: 0 auto;
+      transform: rotateX(0deg) rotateY(0deg); /* 3D loader effect */
     }
 
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      0% { transform: rotateX(0deg) rotateY(0deg); }
+      100% { transform: rotateX(360deg) rotateY(360deg); }
     }
 
     /* Responsive Design */
@@ -192,7 +205,7 @@
 </head>
 <body>
   <header>
-    <h1>Bot API Test</h1>
+    <h1>Bot API Test (3D)</h1>
     <button id="toggleDarkMode">Toggle Dark Mode</button>
   </header>
 
