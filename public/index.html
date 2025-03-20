@@ -16,9 +16,19 @@
       overflow-x: hidden; /* Prevent horizontal scrollbar */
     }
 
+    /* Background Image */
+    body {
+      background-image: url('https://i.postimg.cc/qqNS6FBP/3-D-Block-iphone.jpg'); /* আপনার ইমেজ URL */
+      background-size: cover; /* ইমেজ স্ক্রিনে ফিট করুন */
+      background-position: center; /* ইমেজ মাঝখানে সেট করুন */
+      background-repeat: no-repeat; /* ইমেজ পুনরাবৃত্তি না করুন */
+      background-attachment: fixed; /* ইমেজ স্থির রাখুন (স্ক্রোল করলেও চলবে না) */
+    }
+
     /* Dark Mode */
     body.dark-mode {
-      background-color: #121212;
+      background-image: none; /* ডার্ক মোডে ব্যাকগ্রাউন্ড ইমেজ অফ করুন */
+      background-color: #121212; /* ডার্ক মোডে ব্যাকগ্রাউন্ড কালো করুন */
       color: #e0e0e0;
     }
 
@@ -48,12 +58,12 @@
 
     /* Header Styles */
     header {
-      background-color: #2c3e50;
+      background-color: rgba(0, 0, 0, 0.7); /* ট্রান্সপারেন্ট ব্যাকগ্রাউন্ড */
       color: #fff;
       padding: 20px 0;
       text-align: center;
       position: relative;
-      z-index: 2; /* Ensure header stays above particles */
+      z-index: 2; /* Ensure header stays above background */
     }
 
     h1 {
@@ -85,12 +95,15 @@
       margin: 0 auto;
       padding: 20px;
       position: relative;
-      z-index: 2; /* Ensure container stays above particles */
+      z-index: 2; /* Ensure container stays above background */
+      background-color: rgba(255, 255, 255, 0.9); /* ট্রান্সপারেন্ট ব্যাকগ্রাউন্ড */
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     /* Form Styles */
     form {
-      background-color: #fff;
+      background-color: rgba(255, 255, 255, 0.9); /* ট্রান্সপারেন্ট ব্যাকগ্রাউন্ড */
       padding: 25px;
       margin-bottom: 20px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -201,16 +214,6 @@
       background-color: #fff3cd;
       border-color: #ffeeba;
       color: #856404;
-    }
-
-    /* 3D Particles Background */
-    canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1; /* Place behind other elements */
     }
   </style>
 </head>
@@ -348,93 +351,6 @@
       document.getElementById('response').textContent = '';
       document.getElementById('statusMessage').textContent = '';
     }
-
-    // 3D Particles Background
-    const canvas = document.createElement('canvas');
-    document.body.appendChild(canvas);
-
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    const particleCount = 100;
-
-    // Particle Class
-    class Particle {
-      constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.size = Math.random() * 3 + 1;
-        this.speedX = Math.random() * 3 - 1.5;
-        this.speedY = Math.random() * 3 - 1.5;
-        this.color = document.body.classList.contains('dark-mode') ? '#ffffff' : '#333333';
-      }
-
-      update(mouse) {
-        if (mouse.x && mouse.y) {
-          const dx = this.x - mouse.x;
-          const dy = this.y - mouse.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < 100) {
-            this.x -= dx * 0.02;
-            this.y -= dy * 0.02;
-          }
-        }
-
-        this.x += this.speedX;
-        this.y += this.speedY;
-
-        if (this.x > canvas.width || this.x < 0) this.speedX *= -1;
-        if (this.y > canvas.height || this.y < 0) this.speedY *= -1;
-      }
-
-      draw() {
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // Initialize Particles
-    function init() {
-      particles = [];
-      for (let i = 0; i < particleCount; i++) {
-        particles.push(new Particle());
-      }
-    }
-
-    // Animate Particles
-    const mouse = { x: null, y: null };
-    window.addEventListener('mousemove', (e) => {
-      mouse.x = e.x;
-      mouse.y = e.y;
-    });
-
-    function animate() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach((particle) => {
-        particle.update(mouse);
-        particle.draw();
-      });
-      requestAnimationFrame(animate);
-    }
-
-    // Resize Canvas
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      init();
-    }
-
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-    animate();
-
-    // Update Particle Colors on Dark Mode Toggle
-    toggleDarkModeButton.addEventListener('click', () => {
-      particles.forEach((particle) => {
-        particle.color = document.body.classList.contains('dark-mode') ? '#ffffff' : '#333333';
-      });
-    });
   </script>
 </body>
 </html>
