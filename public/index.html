@@ -13,6 +13,7 @@
       padding: 0;
       color: #333;
       transition: background-color 0.3s ease, color 0.3s ease;
+      line-height: 1.6;
     }
 
     /* Dark Mode */
@@ -56,11 +57,12 @@
 
     h1 {
       margin: 0;
-      font-size: 36px;
+      font-size: 2rem;
+      font-weight: bold;
     }
 
     .container {
-      width: 85%;
+      width: 90%;
       max-width: 600px;
       margin: 0 auto;
       padding: 20px;
@@ -90,7 +92,7 @@
       margin: 10px 0;
       border-radius: 5px;
       border: 1px solid #ccc;
-      font-size: 14px;
+      font-size: 1rem;
       box-sizing: border-box;
       transition: border-color 0.3s ease;
     }
@@ -105,7 +107,7 @@
       color: white;
       padding: 12px 25px;
       border: none;
-      font-size: 16px;
+      font-size: 1rem;
       border-radius: 5px;
       cursor: pointer;
       transition: background-color 0.3s;
@@ -132,7 +134,7 @@
       border-radius: 5px;
       background-color: #ecf0f1;
       color: #333;
-      font-size: 16px;
+      font-size: 1rem;
       border: 1px solid #ccc;
       transition: background-color 0.3s ease, color 0.3s ease;
     }
@@ -171,6 +173,21 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      input[type="text"], button {
+        font-size: 0.9rem;
+      }
+
+      form {
+        padding: 15px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -184,9 +201,11 @@
     <h2>Teach the Bot:</h2>
     <form id="teachForm">
       <div class="form-group">
+        <label for="teachMessage">Message:</label>
         <input type="text" id="teachMessage" placeholder="Enter message" required>
       </div>
       <div class="form-group">
+        <label for="teachReply">Reply:</label>
         <input type="text" id="teachReply" placeholder="Enter reply" required>
       </div>
       <button type="submit">Teach</button>
@@ -195,9 +214,10 @@
     </form>
 
     <!-- Get reply from the bot -->
-    <h2>Get reply from the bot:</h2>
+    <h2>Get Reply from the Bot:</h2>
     <form id="replyForm">
       <div class="form-group">
+        <label for="replyMessage">Message:</label>
         <input type="text" id="replyMessage" placeholder="Enter message to get reply" required>
       </div>
       <button type="submit">Get Reply</button>
@@ -219,8 +239,24 @@
       document.body.classList.toggle('dark-mode');
     });
 
+    // Helper Function for Fetch Requests
+    async function fetchAPI(url, method, body) {
+      try {
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) throw new Error('Network response was not ok');
+        return await response.json();
+      } catch (error) {
+        console.error('Error:', error);
+        showStatusMessage('Error: Something went wrong.', 'error');
+      }
+    }
+
     // Teach Form Submission
-    document.getElementById('teachForm').addEventListener('submit', function(e) {
+    document.getElementById('teachForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const teachLoader = document.getElementById('teachLoader');
       teachLoader.style.display = 'block';
@@ -234,27 +270,17 @@
         return;
       }
 
-      fetch('/teach', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, reply }),
-      })
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById('response').textContent = data;
+      const data = await fetchAPI('/teach', 'POST', { message, reply });
+      if (data) {
+        document.getElementById('response').textContent = data.message || 'Success! The bot has been taught.';
         showStatusMessage('Success! The bot has been taught.', 'success');
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        showStatusMessage('Error: Could not teach the bot.', 'error');
-      })
-      .finally(() => {
-        teachLoader.style.display = 'none';
-      });
+      }
+
+      teachLoader.style.display = 'none';
     });
 
     // Reply Form Submission
-    document.getElementById('replyForm').addEventListener('submit', function(e) {
+    document.getElementById('replyForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const replyLoader = document.getElementById('replyLoader');
       replyLoader.style.display = 'block';
@@ -267,27 +293,13 @@
         return;
       }
 
-      fetch('/reply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.reply) {
-          document.getElementById('response').textContent = `Bot Reply: ${data.reply}`;
-        } else {
-          document.getElementById('response').textContent = 'No reply found for this message.';
-        }
+      const data = await fetchAPI('/reply', 'POST', { message });
+      if (data) {
+        document.getElementById('response').textContent = data.reply ? `Bot Reply: ${data.reply}` : 'No reply found for this message.';
         showStatusMessage('Reply received successfully.', 'success');
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        showStatusMessage('Error: Could not get reply.', 'error');
-      })
-      .finally(() => {
-        replyLoader.style.display = 'none';
-      });
+      }
+
+      replyLoader.style.display = 'none';
     });
 
     // Function to show status messages
