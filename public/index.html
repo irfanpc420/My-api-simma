@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bot API Test (3D Background)</title>
+  <title>IRFAN's PERSONAL API</title>
   <style>
     /* General Styles */
     body {
@@ -87,12 +87,97 @@
       height: 100%;
       z-index: -1; /* Place behind other elements */
     }
+
+    /* Updated Form Styles */
+    .form-group {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      font-size: 1rem;
+      margin-bottom: 5px;
+      color: #333;
+      transition: color 0.3s ease;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      box-sizing: border-box;
+      transition: border-color 0.3s ease;
+    }
+
+    input[type="text"]:focus {
+      border-color: #27ae60;
+      outline: none;
+    }
+
+    button {
+      background-color: #27ae60;
+      color: white;
+      padding: 12px 25px;
+      border: none;
+      font-size: 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #2ecc71;
+    }
+
+    .clear-btn {
+      background-color: #e74c3c;
+      margin-left: 10px;
+    }
+
+    .clear-btn:hover {
+      background-color: #c0392b;
+    }
+
+    /* Response and Status Messages */
+    #response, .status-message {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      background-color: #ecf0f1;
+      color: #333;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .success {
+      background-color: #d4edda;
+      border-color: #c3e6cb;
+      color: #155724;
+    }
+
+    .error {
+      background-color: #f8d7da;
+      border-color: #f5c6cb;
+      color: #721c24;
+    }
+
+    .warning {
+      background-color: #fff3cd;
+      border-color: #ffeeba;
+      color: #856404;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Bot API Test (3D Background)</h1>
-    <button id="toggleDarkMode">Toggle Dark Mode</button>
+    <h1>IRFAN's PERSONAL API</h1>
+    <button id="toggleDarkMode">DARK MODE</button>
   </header>
 
   <div class="container">
