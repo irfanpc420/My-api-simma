@@ -1,0 +1,53 @@
+/** @format */
+
+@font-face {
+  font-family: __din_471259;
+  src: url(/_next/static/media/8428baf01f378a85-s.p.ttf) format("truetype");
+  font-display: swap;
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: __din_Fallback_471259;
+  src: local("Arial");
+  ascent-override: 70.96%;
+  descent-override: 21.82%;
+  line-gap-override: 0%;
+  size-adjust: 101.15%;
+}
+.__className_471259 {
+  font-family: __din_471259, __din_Fallback_471259;
+  font-weight: 400;
+  font-style: normal;
+}
+.__variable_471259 {
+  --font-din: "__din_471259", "__din_Fallback_471259";
+}
+@font-face {
+  font-family: __montserrat_d7b183;
+  src: url(/_next/static/media/34b95a22543c7d98-s.p.ttf) format("truetype");
+  font-display: swap;
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: __montserrat_d7b183;
+  src: url(/_next/static/media/8b46d63ee59017d2-s.p.ttf) format("truetype");
+  font-display: swap;
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: __montserrat_Fallback_d7b183;
+  src: local("Arial");
+  ascent-override: 84.97%;
+  descent-override: 22.03%;
+  line-gap-override: 0%;
+  size-adjust: 113.92%;
+}
+.__className_d7b183 {
+  font-family: __montserrat_d7b183, __montserrat_Fallback_d7b183;
+}
+.__variable_d7b183 {
+  --font-montserrat: "__montserrat_d7b183", "__montserrat_Fallback_d7b183";
+}
